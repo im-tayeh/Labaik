@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Labaik.Api/Labaik.Api.csproj" />
+    <Project Path="src/Labaik.Application/Labaik.Application.csproj" />
+    <Project Path="src/Labaik.Domain/Labaik.Domain.csproj" />
+    <Project Path="src/Labaik.Infrastructure/Labaik.Infrastructure.csproj" />
+  </Folder>
+</Solution>
