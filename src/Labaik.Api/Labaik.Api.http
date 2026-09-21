@@ -1,6 +1,0 @@
-@Labaik.Api_HostAddress = http://localhost:5087
-
-GET {{Labaik.Api_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
