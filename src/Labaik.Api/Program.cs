@@ -13,6 +13,13 @@ try
 {
     var builder = WebApplication.CreateBuilder(args);
 
+    // Render (and most PaaS) inject the port to listen on via the PORT env var.
+    var port = Environment.GetEnvironmentVariable("PORT");
+    if (!string.IsNullOrEmpty(port))
+    {
+        builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+    }
+
     // Stage 2: the real logger, configured from appsettings.json + DI services.
     builder.Services.AddSerilog((services, configuration) => configuration
         .ReadFrom.Configuration(builder.Configuration)
