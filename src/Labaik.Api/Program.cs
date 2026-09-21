@@ -66,7 +66,7 @@ try
     app.MapGet("/version", () => Results.Ok(new
     {
         service = "Labaik.Api",
-        version = "1.0.0",
+        version = "1.0.1",
         environment = app.Environment.EnvironmentName
     }))
        .WithTags("System")
