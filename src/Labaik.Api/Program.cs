@@ -3,7 +3,9 @@ using Labaik.Api.Handlers;
 using Labaik.Application;
 using Labaik.Infrastructure;
 using Labaik.Infrastructure.Authentication;
+using Labaik.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using Serilog;
@@ -77,6 +79,12 @@ try
     builder.Services.AddOpenApi();
 
     var app = builder.Build();
+
+    using (var scope = app.Services.CreateScope())
+    {
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await dbContext.Database.MigrateAsync();
+    }
 
     // One tidy structured line per HTTP request (method, path, status, elapsed ms).
     app.UseSerilogRequestLogging();
