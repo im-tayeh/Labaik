@@ -1,7 +1,16 @@
+using Labaik.Api.Endpoints;
 using Labaik.Api.Handlers;
+using Labaik.Application;
+using Labaik.Infrastructure;
+using Labaik.Infrastructure.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using Serilog;
 using System.Diagnostics;
+using System.Security.Claims;
+using System.Text;
+
 
 // Stage 1: a "bootstrap" logger — captures anything that fails during startup,
 // before the full configuration is loaded.
@@ -38,7 +47,32 @@ try
         };
     });
 
-    builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+    builder.Services.AddApplication();
+    builder.Services.AddInfrastructure(builder.Configuration);
+
+    var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()!;
+
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
+        {
+            options.MapInboundClaims = false;
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = jwtSettings.Issuer,
+                ValidAudience = jwtSettings.Audience,
+                RoleClaimType = ClaimTypes.Role,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SigningKey))
+            };
+        });
+
+    builder.Services.AddAuthorization();
+
+    builder.Services.AddExceptionHandler<ValidationExceptionHandler>(); // specific first
+    builder.Services.AddExceptionHandler<GlobalExceptionHandler>();     // catch-all second
 
     builder.Services.AddOpenApi();
 
@@ -59,25 +93,10 @@ try
 
     app.UseHttpsRedirection();
 
-    app.MapGet("/health", () => Results.Ok(new { status = "Healthy" }))
-       .WithTags("System")
-       .WithSummary("Liveness check");
+    app.UseAuthentication();
+    app.UseAuthorization();
 
-    app.MapGet("/version", () => Results.Ok(new
-    {
-        service = "Labaik.Api",
-        version = "1.0.1",
-        environment = app.Environment.EnvironmentName
-    }))
-       .WithTags("System")
-       .WithSummary("Service version and environment");
-
-    // Temporary — remove after verifying the error pipeline.
-    app.MapGet("/error-test", () =>
-    {
-        throw new InvalidOperationException("Test unhandled exception");
-    });
-
+    app.MapAuthEndpoints();
 
     app.Run();
 }
