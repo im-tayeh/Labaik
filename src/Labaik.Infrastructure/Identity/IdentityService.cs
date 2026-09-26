@@ -16,7 +16,13 @@ internal sealed class IdentityService(
         var existing = await userManager.FindByEmailAsync(email);
         if (existing is not null)
         {
-            return Error.Conflict("User.EmailTaken", "This email is already registered.");
+            // Confirmed -> truly taken.
+            if (existing.EmailConfirmed)
+            {
+                return Error.Conflict("User.EmailTaken", "This email is already registered.");
+            }
+            // Unconfirmed -> reuse it; the handler will send a fresh code.
+            return existing.Id;
         }
 
         var user = new ApplicationUser

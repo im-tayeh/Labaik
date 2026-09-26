@@ -1,8 +1,10 @@
 ﻿using Labaik.Application.Common.Interfaces;
 using Labaik.Infrastructure.Authentication;
 using Labaik.Infrastructure.Email;
+using Labaik.Infrastructure.Groups;
 using Labaik.Infrastructure.Identity;
 using Labaik.Infrastructure.Persistence;
+using Labaik.Infrastructure.Persistence.Interceptors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -21,10 +23,15 @@ public static class DependencyInjection
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' was not found.");
 
-        services.AddDbContext<AppDbContext>(options =>
+        services.AddScoped<DomainEventDispatchInterceptor>();
+
+        services.AddDbContext<AppDbContext>((sp, options) =>
         {
             options.UseNpgsql(connectionString);
+            options.AddInterceptors(sp.GetRequiredService<DomainEventDispatchInterceptor>());
         });
+
+        services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
 
         services.AddDataProtection();
 
@@ -61,6 +68,9 @@ public static class DependencyInjection
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 
         services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+
+        services.AddScoped<IJoinCodeGenerator, JoinCodeGenerator>();
+        services.AddScoped<IUserDirectory, UserDirectory>();
 
         return services;
     }

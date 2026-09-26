@@ -1,7 +1,9 @@
 using Labaik.Api.Endpoints;
 using Labaik.Api.Extensions;
 using Labaik.Api.Handlers;
+using Labaik.Api.Services;
 using Labaik.Application;
+using Labaik.Application.Common.Interfaces;
 using Labaik.Infrastructure;
 using Labaik.Infrastructure.Authentication;
 using Labaik.Infrastructure.Persistence;
@@ -80,6 +82,9 @@ try
 
     builder.Services.AddOpenApi();
 
+    builder.Services.AddHttpContextAccessor();
+    builder.Services.AddScoped<ICurrentUser, CurrentUser>();
+
     var app = builder.Build();
 
     using (var scope = app.Services.CreateScope())
@@ -107,6 +112,8 @@ try
     app.UseAuthorization();
 
     app.MapAuthEndpoints();
+    app.MapJourneyEndpoints();
+    app.MapGroupEndpoints();
 
     app.Run();
 }
