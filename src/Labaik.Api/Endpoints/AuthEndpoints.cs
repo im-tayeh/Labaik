@@ -1,4 +1,5 @@
-﻿using Labaik.Api.Extensions;
+﻿using Asp.Versioning;
+using Labaik.Api.Extensions;
 using Labaik.Application.Features.Authentication.ForgotPassword;
 using Labaik.Application.Features.Authentication.Login;
 using Labaik.Application.Features.Authentication.RefreshToken;
@@ -16,7 +17,14 @@ public static class AuthEndpoints
 {
     public static IEndpointRouteBuilder MapAuthEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/v1/auth").WithTags("Authentication");
+        var versionSet = app.NewApiVersionSet()
+            .HasApiVersion(new ApiVersion(1))
+            .ReportApiVersions()
+            .Build();
+
+        var group = app.MapGroup("/api/v{version:apiversion}/auth")
+            .WithApiVersionSet(versionSet)
+            .WithTags("Authentication");
 
         group.MapPost("/register", async (RegisterCommand command, ISender sender, CancellationToken ct) =>
         {

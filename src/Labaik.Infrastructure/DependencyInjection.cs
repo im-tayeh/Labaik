@@ -40,7 +40,19 @@ public static class DependencyInjection
 
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IVerificationCodeService, VerificationCodeService>();
-        services.AddScoped<IEmailSender, LoggingEmailSender>();
+
+        services.Configure<EmailSettings>(configuration.GetSection(EmailSettings.SectionName));
+
+        var emailProvider = configuration.GetSection(EmailSettings.SectionName)["Provider"];
+        if (string.Equals(emailProvider, "Smtp", StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddScoped<IEmailSender, SmtpEmailSender>();
+        }
+        else
+        {
+            services.AddScoped<IEmailSender, LoggingEmailSender>();
+        }
+
         services.AddSingleton(TimeProvider.System);
 
         services.AddOptions<JwtSettings>()

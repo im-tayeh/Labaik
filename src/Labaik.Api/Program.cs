@@ -1,4 +1,5 @@
 using Labaik.Api.Endpoints;
+using Labaik.Api.Extensions;
 using Labaik.Api.Handlers;
 using Labaik.Application;
 using Labaik.Infrastructure;
@@ -51,6 +52,7 @@ try
 
     builder.Services.AddApplication();
     builder.Services.AddInfrastructure(builder.Configuration);
+    builder.Services.AddApiVersioningConfiguration();
 
     var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()!;
 
