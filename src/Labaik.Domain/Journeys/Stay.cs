@@ -10,7 +10,7 @@ public sealed class Stay : Entity
     public string PlaceName { get; private set; } = string.Empty;
     public DateTimeOffset ArrivalAtUtc { get; private set; }
 
-    private Stay() { } // EF
+    private Stay() { }
 
     internal Stay(string city, AccommodationType type, string placeName, DateTimeOffset arrivalAtUtc)
     {

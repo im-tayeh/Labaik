@@ -386,7 +386,8 @@ namespace Labaik.Infrastructure.Persistence.Migrations
 
                             b1.Property<string>("CityName")
                                 .IsRequired()
-                                .HasColumnType("text");
+                                .HasMaxLength(100)
+                                .HasColumnType("character varying(100)");
 
                             b1.Property<Guid>("JourneyId")
                                 .HasColumnType("uuid");

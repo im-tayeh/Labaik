@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Labaik.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260926144214_AddJourneyAggregate")]
-    partial class AddJourneyAggregate
+    [Migration("20260928134830_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -389,7 +389,8 @@ namespace Labaik.Infrastructure.Persistence.Migrations
 
                             b1.Property<string>("CityName")
                                 .IsRequired()
-                                .HasColumnType("text");
+                                .HasMaxLength(100)
+                                .HasColumnType("character varying(100)");
 
                             b1.Property<Guid>("JourneyId")
                                 .HasColumnType("uuid");

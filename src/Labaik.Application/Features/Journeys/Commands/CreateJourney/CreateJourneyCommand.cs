@@ -7,8 +7,16 @@ using MediatR;
 
 namespace Labaik.Application.Features.Journeys.Commands.CreateJourney;
 
-public sealed record CreateJourneyCommand(PilgrimageType PilgrimageType, bool IsFirstTime, TravelParty TravelParty)
-    : IRequest<Result<Guid>>;
+public sealed record CreateJourneyArrival(TransportMode Mode, string EntryPoint);
+
+public sealed record CreateJourneyStay(string CityName, AccommodationType AccommodationType, string PlaceName, DateTimeOffset ArrivalAtUtc);
+
+public sealed record CreateJourneyCommand(
+    PilgrimageType PilgrimageType,
+    bool IsFirstTime,
+    TravelParty TravelParty,
+    CreateJourneyArrival Arrival,
+    List<CreateJourneyStay> Stays) : IRequest<Result<Guid>>;
 
 public sealed class CreateJourneyCommandValidator : AbstractValidator<CreateJourneyCommand>
 {
@@ -16,6 +24,16 @@ public sealed class CreateJourneyCommandValidator : AbstractValidator<CreateJour
     {
         RuleFor(x => x.PilgrimageType).IsInEnum();
         RuleFor(x => x.TravelParty).IsInEnum();
+        RuleFor(x => x.Arrival).NotNull();
+        RuleFor(x => x.Arrival.Mode).IsInEnum();
+        RuleFor(x => x.Arrival.EntryPoint).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.Stays).NotEmpty();
+        RuleForEach(x => x.Stays).ChildRules(s =>
+        {
+            s.RuleFor(i => i.CityName).NotEmpty().MaximumLength(100);
+            s.RuleFor(i => i.AccommodationType).IsInEnum();
+            s.RuleFor(i => i.PlaceName).NotEmpty().MaximumLength(200);
+        });
     }
 }
 
@@ -30,15 +48,39 @@ public sealed class CreateJourneyCommandHandler(
             return Error.Unauthorized("Auth.Required", "Authentication is required.");
         }
 
-        var result = Journey.Create(userId, request.PilgrimageType, request.IsFirstTime, request.TravelParty);
-        if (result.IsFailure)
+        // Build the whole aggregate in memory, then save once (all inserts, no concurrency issues).
+        var create = Journey.Create(userId, request.PilgrimageType, request.IsFirstTime, request.TravelParty);
+        if (create.IsFailure)
         {
-            return result.Error!;
+            return create.Error!;
         }
 
-        context.Journeys.Add(result.Value);
-        await context.SaveChangesAsync(cancellationToken);
+        var journey = create.Value;
 
-        return result.Value.Id;
+        var arrival = journey.SetArrivalPlan(request.Arrival.Mode, request.Arrival.EntryPoint);
+        if (arrival.IsFailure)
+        {
+            return arrival.Error!;
+        }
+
+        foreach (var s in request.Stays)
+        {
+            var add = journey.AddStay(s.CityName, s.AccommodationType, s.PlaceName, s.ArrivalAtUtc);
+            if (add.IsFailure)
+            {
+                return add.Error!;
+            }
+        }
+
+        var ready = journey.MarkReady();
+        if (ready.IsFailure)
+        {
+            return ready.Error!;
+        }
+
+        context.Journeys.Add(journey);
+        await context.SaveChangesAsync(cancellationToken); // single save
+
+        return journey.Id;
     }
 }

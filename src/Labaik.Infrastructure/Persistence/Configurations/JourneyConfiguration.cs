@@ -24,11 +24,11 @@ internal sealed class JourneyConfiguration : IEntityTypeConfiguration<Journey>
         {
             s.ToTable("JourneyStays");
             s.WithOwner().HasForeignKey("JourneyId");
-            s.HasKey(x => x.Id);
+            s.HasKey(x => x.Id);   // use the existing Guid key
+            s.Property(x => x.CityName).HasMaxLength(100);
             s.Property(x => x.PlaceName).HasMaxLength(200);
         });
 
-        // Tell EF to read/write the collection through the private backing field.
         builder.Navigation(j => j.Stays).UsePropertyAccessMode(PropertyAccessMode.Field);
     }
 }

@@ -8,3 +8,4 @@ using System.Text;
 namespace Labaik.Application.Features.Groups.Commands.CreateGroup;
 
 public sealed record CreateGroupCommand(string Name) : IRequest<Result<GroupDto>>;
+
