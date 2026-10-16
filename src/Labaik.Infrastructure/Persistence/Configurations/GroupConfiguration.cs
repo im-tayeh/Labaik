@@ -19,6 +19,7 @@ internal sealed class GroupConfiguration : IEntityTypeConfiguration<Group>
             m.ToTable("GroupMembers");
             m.WithOwner().HasForeignKey("GroupId");
             m.HasKey(x => x.Id);
+            m.Property(x => x.Id).ValueGeneratedNever(); // new members on a saved group must INSERT, not UPDATE
             m.HasIndex(nameof(GroupMember.UserId), "GroupId").IsUnique(); // no double-join
         });
 
