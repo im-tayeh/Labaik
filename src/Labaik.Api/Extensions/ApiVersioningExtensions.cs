@@ -17,7 +17,8 @@ public static class ApiVersioningExtensions
             {
                 options.GroupNameFormat = "'v'VVV";
                 options.SubstituteApiVersionInUrl = true;
-            });
+            })
+            .AddOpenApi(); // one OpenAPI document per API version (/openapi/v1.json, ...)
 
         return services;
     }

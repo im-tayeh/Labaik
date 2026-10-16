@@ -85,7 +85,12 @@ No `Contracts` or `Client` project — backend only.
 - **MediatR 14.2** (community license is fine here), **FluentValidation 12.1.1**.
 - **Serilog**; **Scalar** OpenAPI UI (Code-First generation).
 - **Asp.Versioning** — URL versioning: `/api/v{version:apiVersion}/...`.
-- **Microsoft.OpenApi pinned 2.7.5** (transitive pin; fixes CVE-2026-49451).
+- **Microsoft.OpenApi pinned 2.12.0** (transitive pin; ≥ 2.7.5 fixes CVE-2026-49451;
+  2.12.0 is the minimum required by Microsoft.AspNetCore.OpenApi 10.0.12).
+- **OpenAPI per version**: `AddApiVersioning().AddApiExplorer().AddOpenApi()`
+  (Asp.Versioning.OpenApi) + `MapOpenApi().WithDocumentPerVersion()`; do not call
+  `builder.Services.AddOpenApi()` directly (analyzer AV0029/AV0030). Document:
+  `/openapi/v1.json`.
 - **Package management**: Central Package Management. Versions in
   `Directory.Packages.props`; shared build settings in `Directory.Build.props`;
   `CentralPackageTransitivePinningEnabled` on. `.csproj` files carry **no** `Version`

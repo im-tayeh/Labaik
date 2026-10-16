@@ -98,7 +98,6 @@ try
     builder.Services.AddExceptionHandler<ValidationExceptionHandler>(); // specific first
     builder.Services.AddExceptionHandler<GlobalExceptionHandler>();     // catch-all second
 
-    builder.Services.AddOpenApi();
 
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<ICurrentUser, CurrentUser>();
@@ -130,7 +129,7 @@ try
 
     if (app.Environment.IsDevelopment())
     {
-        app.MapOpenApi();
+        app.MapOpenApi().WithDocumentPerVersion();
         app.MapScalarApiReference();
     }
 
