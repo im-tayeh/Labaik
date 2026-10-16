@@ -198,8 +198,9 @@ Work the Backlog top-down without waiting for per-task orders:
   returns the seeded Umrah steps; completing a step advances `CurrentOrder`;
   finishing all sets `isCompleted`.
   - _Done:_ `Rituals` domain + 4 endpoints (`pilgrimageType` defaults to Umrah); steps complete strictly in order (409 otherwise); idempotent `RitualStepSeeder` upserts by (type, order) and unpublishes removed steps; migration `AddRitualGuide`; 10 placeholder Umrah steps (`reviewStatus: PendingReligiousApproval`)._
-- [ ] **T3 — Home screen aggregation.** `GET /api/v1/home` returning the pilgrim's
+- [x] **T3 — Home screen aggregation.** `GET /api/v1/home` returning the pilgrim's
   journey status, next ritual step, and group summary in one call.
+  - _Done:_ read-only `GetHomeQuery` -> `HomeDto { journey?, ritual?, group? }` (null sections when not applicable); ritual type follows the journey (default Umrah), `isStarted=false` shows the first step without creating progress; group = most recently joined, with `myRole`._
 - [ ] **T4 — Trip details view/edit.** `GET /journeys/{id}` (owner only) + edit
   endpoints matching the Figma "تفاصيل الرحلة / تعديل تفاصيل الرحلة" screens.
 - [ ] **T5 — Ihram preparation content.** Educational content module (content as

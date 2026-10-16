@@ -119,6 +119,7 @@ try
     app.MapJourneyEndpoints();
     app.MapGroupEndpoints();
     app.MapRitualEndpoints();
+    app.MapHomeEndpoints();
 
     app.Run();
 }
