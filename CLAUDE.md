@@ -204,8 +204,9 @@ Work the Backlog top-down without waiting for per-task orders:
 - [x] **T4 — Trip details view/edit.** `GET /journeys/{id}` (owner only) + edit
   endpoints matching the Figma "تفاصيل الرحلة / تعديل تفاصيل الرحلة" screens.
   - _Done:_ `GET /journeys/{id}` + `PUT /journeys/{id}` (full replace of isFirstTime, travelParty, arrival, stays; `pilgrimageType` not editable); editable while Draft or Ready (409 after); non-owner -> 404; stays ordered by arrival; `JourneyStays` key `ValueGeneratedNever`._
-- [ ] **T5 — Ihram preparation content.** Educational content module (content as
+- [x] **T5 — Ihram preparation content.** Educational content module (content as
   JSON seed, same pattern as Ritual Guide).
+  - _Done:_ generic `GuideArticle` aggregate keyed by (`GuideCategory`, Order); `GET /guides?category=` (default IhramPreparation) + `GET /guides/{id}`; idempotent `GuideArticleSeeder` from `ihram-preparation.json` (8 placeholder articles, pending religious approval); migration `AddGuideArticles`. New content screens = new category + JSON file._
 - [ ] **T6 — Announcements.** Group leader broadcasts to members; pilgrim lists/reads.
   `Announcement` under the Group aggregate or its own aggregate referencing GroupId.
 - [ ] **T7 — Family circle / live location.** Store+relay member lat/lng for

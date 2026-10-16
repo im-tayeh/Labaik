@@ -49,6 +49,42 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                     b.ToTable("Groups", (string)null);
                 });
 
+            modelBuilder.Entity("Labaik.Domain.Guides.GuideArticle", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Category")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Reference")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Category", "Order")
+                        .IsUnique();
+
+                    b.ToTable("GuideArticles", (string)null);
+                });
+
             modelBuilder.Entity("Labaik.Domain.Identity.RefreshToken", b =>
                 {
                     b.Property<Guid>("Id")
@@ -410,7 +446,6 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                     b.OwnsMany("Labaik.Domain.Groups.GroupMember", "Members", b1 =>
                         {
                             b1.Property<Guid>("Id")
-                                .ValueGeneratedOnAdd()
                                 .HasColumnType("uuid");
 
                             b1.Property<Guid>("GroupId")
@@ -446,7 +481,6 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                     b.OwnsMany("Labaik.Domain.Journeys.Stay", "Stays", b1 =>
                         {
                             b1.Property<Guid>("Id")
-                                .ValueGeneratedOnAdd()
                                 .HasColumnType("uuid");
 
                             b1.Property<int>("AccommodationType")

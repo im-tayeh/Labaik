@@ -1,5 +1,6 @@
 ﻿using Labaik.Application.Common.Interfaces;
 using Labaik.Domain.Groups;
+using Labaik.Domain.Guides;
 using Labaik.Domain.Identity;
 using Labaik.Domain.Journeys;
 using Labaik.Domain.Rituals;
@@ -20,6 +21,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Group> Groups => Set<Group>();
     public DbSet<RitualStep> RitualSteps => Set<RitualStep>();
     public DbSet<RitualProgress> RitualProgresses => Set<RitualProgress>();
+    public DbSet<GuideArticle> GuideArticles => Set<GuideArticle>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

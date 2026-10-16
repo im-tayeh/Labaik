@@ -95,6 +95,7 @@ try
 
         var seedLogger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Seed");
         await RitualStepSeeder.SeedAsync(dbContext, seedLogger);
+        await GuideArticleSeeder.SeedAsync(dbContext, seedLogger);
     }
 
     // One tidy structured line per HTTP request (method, path, status, elapsed ms).
@@ -120,6 +121,7 @@ try
     app.MapGroupEndpoints();
     app.MapRitualEndpoints();
     app.MapHomeEndpoints();
+    app.MapGuideEndpoints();
 
     app.Run();
 }
