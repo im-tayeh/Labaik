@@ -30,7 +30,9 @@ public static class GroupEndpoints
         {
             var result = await sender.Send(command, ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
-        }).WithSummary("Create a group (creator becomes the leader)");
+        })
+        .RequireAuthorization(AuthorizationPolicies.Supervisor)
+        .WithSummary("Create a group (supervisors only; creator becomes the leader)");
 
         group.MapGet("/{code}", async (string code, ISender sender, CancellationToken ct) =>
         {

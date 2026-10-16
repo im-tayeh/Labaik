@@ -2,14 +2,19 @@
 using Labaik.Application.Common.Models;
 using Labaik.Domain.Common.Results;
 using Labaik.Domain.Identity;
+using Labaik.Application.Common.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Labaik.Infrastructure.Identity;
 
 internal sealed class IdentityService(
     UserManager<ApplicationUser> userManager,
     IVerificationCodeService verificationCodeService,
-    IRefreshTokenService refreshTokenService) : IIdentityService
+    IRefreshTokenService refreshTokenService,
+    IOptions<AdminSettings> adminOptions,
+    ILogger<IdentityService> logger) : IIdentityService
 {
     public async Task<Result<Guid>> CreateUserAsync(string fullName, string email, string password, CancellationToken cancellationToken = default)
     {
@@ -143,10 +148,87 @@ internal sealed class IdentityService(
     private static Error IdentityFailure(string code, IdentityResult result)
         => Error.Failure(code, string.Join(" ", result.Errors.Select(e => e.Description)));
 
+    // Every token issue (login, verify, Google, refresh) goes through here, so the bootstrap
+    // Admin grant takes effect without a restart.
     private async Task<AuthUser> BuildAuthUserAsync(ApplicationUser user)
     {
+        await EnsureBootstrapAdminAsync(user);
         var roles = await userManager.GetRolesAsync(user);
         return new AuthUser(user.Id, user.Email!, user.FullName, roles.ToList());
+    }
+
+    private async Task EnsureBootstrapAdminAsync(ApplicationUser user)
+    {
+        if (!user.EmailConfirmed || user.Email is null)
+        {
+            return;
+        }
+
+        var isConfigured = adminOptions.Value.Emails
+            .Any(e => string.Equals(e?.Trim(), user.Email, StringComparison.OrdinalIgnoreCase));
+        if (!isConfigured || await userManager.IsInRoleAsync(user, Roles.Admin))
+        {
+            return;
+        }
+
+        var result = await userManager.AddToRoleAsync(user, Roles.Admin);
+        if (result.Succeeded)
+        {
+            logger.LogInformation("Granted bootstrap Admin role to user {UserId}.", user.Id);
+        }
+        else
+        {
+            logger.LogError("Could not grant bootstrap Admin role to {UserId}: {Errors}",
+                user.Id, string.Join(" ", result.Errors.Select(e => e.Description)));
+        }
+    }
+
+    public async Task<Result<UserAccountDto>> FindAccountByEmailAsync(string email, CancellationToken cancellationToken = default)
+    {
+        var user = await userManager.FindByEmailAsync(email);
+        return user is null
+            ? Error.NotFound("User.NotFound", "No account found for this email.")
+            : await ToAccountDtoAsync(user);
+    }
+
+    public async Task<Result<UserAccountDto>> AddToRoleAsync(Guid userId, string role, CancellationToken cancellationToken = default)
+    {
+        var user = await userManager.FindByIdAsync(userId.ToString());
+        if (user is null)
+        {
+            return Error.NotFound("User.NotFound", "No account found.");
+        }
+
+        if (!await userManager.IsInRoleAsync(user, role))
+        {
+            var result = await userManager.AddToRoleAsync(user, role);
+            if (!result.Succeeded) return IdentityFailure("User.RoleChangeFailed", result);
+        }
+
+        return await ToAccountDtoAsync(user);
+    }
+
+    public async Task<Result<UserAccountDto>> RemoveFromRoleAsync(Guid userId, string role, CancellationToken cancellationToken = default)
+    {
+        var user = await userManager.FindByIdAsync(userId.ToString());
+        if (user is null)
+        {
+            return Error.NotFound("User.NotFound", "No account found.");
+        }
+
+        if (await userManager.IsInRoleAsync(user, role))
+        {
+            var result = await userManager.RemoveFromRoleAsync(user, role);
+            if (!result.Succeeded) return IdentityFailure("User.RoleChangeFailed", result);
+        }
+
+        return await ToAccountDtoAsync(user);
+    }
+
+    private async Task<UserAccountDto> ToAccountDtoAsync(ApplicationUser user)
+    {
+        var roles = await userManager.GetRolesAsync(user);
+        return new UserAccountDto(user.Id, user.Email!, user.FullName, user.EmailConfirmed, roles.ToList());
     }
 
     public async Task<Result<AuthUser>> GetAuthUserByIdAsync(Guid userId, CancellationToken cancellationToken = default)

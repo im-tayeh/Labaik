@@ -14,5 +14,8 @@ public interface IIdentityService
     Task<Result> ForgotPasswordAsync(string email, CancellationToken cancellationToken = default);
     // Finds the user linked to the external login, else links by verified email, else creates a user.
     Task<Result<AuthUser>> ExternalSignInAsync(ExternalIdentity identity, CancellationToken cancellationToken = default);
+    Task<Result<UserAccountDto>> FindAccountByEmailAsync(string email, CancellationToken cancellationToken = default);
+    Task<Result<UserAccountDto>> AddToRoleAsync(Guid userId, string role, CancellationToken cancellationToken = default);
+    Task<Result<UserAccountDto>> RemoveFromRoleAsync(Guid userId, string role, CancellationToken cancellationToken = default);
     Task<Result> ResetPasswordAsync(string email, string code, string newPassword, CancellationToken cancellationToken = default);
 }

@@ -218,8 +218,9 @@ Work the Backlog top-down without waiting for per-task orders:
 - [x] **T9 — Google sign-in.** Flutter sends a Google ID token; backend validates it
   (Google token validation) and issues our JWT (link/create `ApplicationUser`).
   - _Done:_ `POST /auth/google { idToken }` -> same `AuthTokens` as login. `Google.Apis.Auth` validates signature/expiry/audience against `Authentication:Google:ClientIds` (env `Authentication__Google__ClientIds__0..n`; empty -> 400 `Auth.GoogleNotConfigured`). Identity external logins (`AspNetUserLogins`): linked login -> sign in; else link by email only if Google `email_verified` (unconfirmed existing account: password removed before confirming, anti-squatting); else create password-less confirmed user. **Pending:** real Client IDs from Google Cloud._
-- [ ] **T10 — Role-based access.** Supervisor vs Pilgrim authorization policies and
+- [x] **T10 — Role-based access.** Supervisor vs Pilgrim authorization policies and
   screen gating.
+  - _Done:_ roles `Admin`/`Supervisor` (pilgrim = no role), seeded by `RoleSeeder`; `Admin:Emails` (env `Admin__Emails__0..n`) bootstraps Admin on any token issue; policies `Admin`, `Supervisor` (Supervisor or Admin); `POST /groups` now Supervisor-only (**breaking**: pilgrims get 403); `GET /admin/users?email=`, `PUT|DELETE /admin/users/{id}/supervisor` (applies from next token/refresh); roles exposed in login `user.roles` and `/auth/me`. Group leadership stays per-group (announcements remain leader-only)._
 - [ ] **T11 — Tests.** xUnit. Start with Domain unit tests (aggregates/state
   machines), then integration tests (Testcontainers) for key endpoints. Wire
   `dotnet test` into CI.

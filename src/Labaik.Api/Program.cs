@@ -93,7 +93,7 @@ try
             };
         });
 
-    builder.Services.AddAuthorization();
+    builder.Services.AddAppAuthorization();
 
     builder.Services.AddExceptionHandler<ValidationExceptionHandler>(); // specific first
     builder.Services.AddExceptionHandler<GlobalExceptionHandler>();     // catch-all second
@@ -118,6 +118,7 @@ try
         var seedLogger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Seed");
         await RitualStepSeeder.SeedAsync(dbContext, seedLogger);
         await GuideArticleSeeder.SeedAsync(dbContext, seedLogger);
+        await RoleSeeder.SeedAsync(scope.ServiceProvider, seedLogger);
     }
 
     // One tidy structured line per HTTP request (method, path, status, elapsed ms).
@@ -147,6 +148,7 @@ try
     app.MapAnnouncementEndpoints();
     app.MapLocationEndpoints();
     app.MapNotificationEndpoints();
+    app.MapAdminEndpoints();
     app.MapHub<LocationHub>(LocationHub.Path);
     app.MapHub<EventsHub>(EventsHub.Path);
 

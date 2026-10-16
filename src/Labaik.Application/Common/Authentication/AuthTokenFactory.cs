@@ -14,6 +14,6 @@ internal sealed class AuthTokenFactory(
 
         return new AuthTokens(
             accessToken.Value, refreshToken, "Bearer", accessToken.ExpiresInSeconds,
-            new AuthUserSummary(user.Id, user.Email, user.FullName));
+            new AuthUserSummary(user.Id, user.Email, user.FullName, user.Roles));
     }
 }

@@ -93,7 +93,8 @@ public static class AuthEndpoints
         {
             id = user.FindFirstValue(JwtRegisteredClaimNames.Sub),
             email = user.FindFirstValue(JwtRegisteredClaimNames.Email),
-            name = user.FindFirstValue(JwtRegisteredClaimNames.Name)
+            name = user.FindFirstValue(JwtRegisteredClaimNames.Name),
+            roles = user.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList()
         }))
         .RequireAuthorization()
         .WithSummary("Return the authenticated user's claims");

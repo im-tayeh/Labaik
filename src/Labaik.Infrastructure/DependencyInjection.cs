@@ -46,6 +46,8 @@ public static class DependencyInjection
             .AddDefaultTokenProviders();
 
         services.AddScoped<IIdentityService, IdentityService>();
+        services.AddOptions<AdminSettings>()
+            .Bind(configuration.GetSection(AdminSettings.SectionName));
         services.AddScoped<IVerificationCodeService, VerificationCodeService>();
 
         services.Configure<EmailSettings>(configuration.GetSection(EmailSettings.SectionName));
