@@ -6,6 +6,7 @@ using Labaik.Application.Features.Announcements.Queries.GetGroupAnnouncements;
 using Labaik.Application.Features.Groups.Commands.CreateGroup;
 using Labaik.Application.Features.Groups.Commands.JoinGroup;
 using Labaik.Application.Features.Groups.Queries.GetGroupByCode;
+using Labaik.Application.Features.Locations.Queries.GetGroupMemberLocations;
 using MediatR;
 
 namespace Labaik.Api.Endpoints;
@@ -53,6 +54,12 @@ public static class GroupEndpoints
             var result = await sender.Send(new GetGroupAnnouncementsQuery(groupId), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         }).WithSummary("List the group's announcements, newest first, with read state (members only)");
+
+        group.MapGet("/{groupId:guid}/locations", async (Guid groupId, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new GetGroupMemberLocationsQuery(groupId), ct);
+            return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
+        }).WithSummary("Where are my group members: every member with their shared position (members only)");
 
         return app;
     }

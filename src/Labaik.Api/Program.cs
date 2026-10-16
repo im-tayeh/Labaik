@@ -1,6 +1,7 @@
 using Labaik.Api.Endpoints;
 using Labaik.Api.Extensions;
 using Labaik.Api.Handlers;
+using Labaik.Api.Realtime;
 using Labaik.Api.Services;
 using Labaik.Application;
 using Labaik.Application.Common.Interfaces;
@@ -74,6 +75,21 @@ try
                 RoleClaimType = ClaimTypes.Role,
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SigningKey))
             };
+
+            // WebSockets cannot send an Authorization header: SignalR clients pass the JWT as ?access_token=.
+            options.Events = new JwtBearerEvents
+            {
+                OnMessageReceived = context =>
+                {
+                    var token = context.Request.Query["access_token"];
+                    if (!string.IsNullOrEmpty(token) && context.HttpContext.Request.Path.StartsWithSegments("/hubs"))
+                    {
+                        context.Token = token;
+                    }
+
+                    return Task.CompletedTask;
+                }
+            };
         });
 
     builder.Services.AddAuthorization();
@@ -85,6 +101,9 @@ try
 
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<ICurrentUser, CurrentUser>();
+
+    builder.Services.AddSignalR();
+    builder.Services.AddScoped<ILocationBroadcaster, SignalRLocationBroadcaster>();
 
     var app = builder.Build();
 
@@ -123,6 +142,8 @@ try
     app.MapHomeEndpoints();
     app.MapGuideEndpoints();
     app.MapAnnouncementEndpoints();
+    app.MapLocationEndpoints();
+    app.MapHub<LocationHub>(LocationHub.Path);
 
     app.Run();
 }

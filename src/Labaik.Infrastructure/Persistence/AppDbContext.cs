@@ -4,6 +4,7 @@ using Labaik.Domain.Groups;
 using Labaik.Domain.Guides;
 using Labaik.Domain.Identity;
 using Labaik.Domain.Journeys;
+using Labaik.Domain.Locations;
 using Labaik.Domain.Rituals;
 using Labaik.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
@@ -24,6 +25,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<RitualProgress> RitualProgresses => Set<RitualProgress>();
     public DbSet<GuideArticle> GuideArticles => Set<GuideArticle>();
     public DbSet<Announcement> Announcements => Set<Announcement>();
+    public DbSet<LocationShare> LocationShares => Set<LocationShare>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

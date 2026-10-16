@@ -203,6 +203,38 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                     b.ToTable("Journeys", (string)null);
                 });
 
+            modelBuilder.Entity("Labaik.Domain.Locations.LocationShare", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<double?>("AccuracyMeters")
+                        .HasColumnType("double precision");
+
+                    b.Property<bool>("IsSharing")
+                        .HasColumnType("boolean");
+
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("double precision");
+
+                    b.Property<DateTimeOffset?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("LocationShares", (string)null);
+                });
+
             modelBuilder.Entity("Labaik.Domain.Rituals.RitualProgress", b =>
                 {
                     b.Property<Guid>("Id")

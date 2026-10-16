@@ -210,8 +210,9 @@ Work the Backlog top-down without waiting for per-task orders:
 - [x] **T6 — Announcements.** Group leader broadcasts to members; pilgrim lists/reads.
   `Announcement` under the Group aggregate or its own aggregate referencing GroupId.
   - _Done:_ own `Announcement` aggregate (GroupId) created only via `Group.PostAnnouncement` (leader-only, 403 otherwise); owned `AnnouncementRead` receipts (author auto-read); `POST/GET /groups/{groupId}/announcements`, `POST /announcements/{id}/read` (idempotent, 204); non-members -> 404; `home.group.unreadAnnouncements`; `AnnouncementPosted` event ready for T8 notifications; migration `AddAnnouncements`._
-- [ ] **T7 — Family circle / live location.** Store+relay member lat/lng for
+- [x] **T7 — Family circle / live location.** Store+relay member lat/lng for
   "أين أفراد مجموعتي"; realtime via SignalR. Backend stores/relays only; map is Flutter.
+  - _Done:_ `LocationShare` aggregate (one per user, last position only, opt-in, stop = erase, stale after 15 min); `GET /location/me`, `PUT /location/sharing`, `POST /location`, `GET /groups/{groupId}/locations` (members only); SignalR hub `/hubs/location` (JWT via `?access_token=`; client `UpdateLocation`, server `LocationUpdated`/`StoppedSharing`), pushed via domain events + `ILocationBroadcaster` so REST and hub updates both broadcast; migration `AddLocationSharing`. Hub subscribes groups at connect time (reconnect after joining a group)._
 - [ ] **T8 — Chat + Notifications.** Group/direct messaging + notifications (SignalR).
 - [ ] **T9 — Google sign-in.** Flutter sends a Google ID token; backend validates it
   (Google token validation) and issues our JWT (link/create `ApplicationUser`).
