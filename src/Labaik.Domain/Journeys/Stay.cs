@@ -5,7 +5,7 @@ namespace Labaik.Domain.Journeys;
 
 public sealed class Stay : Entity
 {
-    public string CityName { get; private set; }
+    public string CityName { get; private set; } = string.Empty;
     public AccommodationType AccommodationType { get; private set; }
     public string PlaceName { get; private set; } = string.Empty;
     public DateTimeOffset ArrivalAtUtc { get; private set; }

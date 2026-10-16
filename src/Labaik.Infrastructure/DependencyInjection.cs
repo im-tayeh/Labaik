@@ -51,7 +51,18 @@ public static class DependencyInjection
         services.Configure<EmailSettings>(configuration.GetSection(EmailSettings.SectionName));
 
         var emailProvider = configuration.GetSection(EmailSettings.SectionName)["Provider"];
-        if (string.Equals(emailProvider, "Smtp", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(emailProvider, "Brevo", StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddHttpClient<IEmailSender, BrevoEmailSender>((sp, client) =>
+            {
+                var settings = sp.GetRequiredService<IOptions<EmailSettings>>().Value;
+                client.BaseAddress = new Uri("https://api.brevo.com/");
+                client.Timeout = TimeSpan.FromSeconds(15);
+                client.DefaultRequestHeaders.Add("api-key", settings.ApiKey);
+                client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+            });
+        }
+        else if (string.Equals(emailProvider, "Smtp", StringComparison.OrdinalIgnoreCase))
         {
             services.AddScoped<IEmailSender, SmtpEmailSender>();
         }
