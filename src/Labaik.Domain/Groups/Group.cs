@@ -1,4 +1,5 @@
-﻿using Labaik.Domain.Common;
+﻿using Labaik.Domain.Announcements;
+using Labaik.Domain.Common;
 using Labaik.Domain.Common.Results;
 using Labaik.Domain.Groups.Enums;
 using Labaik.Domain.Groups.Events;
@@ -48,6 +49,20 @@ public sealed class Group : AggregateRoot
         }
 
         return new Group(name.Trim(), joinCode.Trim().ToUpperInvariant(), leaderId, createdAtUtc);
+    }
+
+    public bool IsMember(Guid userId) => _members.Any(m => m.UserId == userId);
+
+    // Only the leader broadcasts to the group. The new Announcement is its own aggregate;
+    // this group is not modified.
+    public Result<Announcement> PostAnnouncement(Guid authorId, string title, string body, DateTimeOffset postedAtUtc)
+    {
+        if (authorId != LeaderId)
+        {
+            return GroupErrors.NotLeader;
+        }
+
+        return Announcement.Create(Id, authorId, title, body, postedAtUtc);
     }
 
     public Result Join(Guid userId, DateTimeOffset joinedAtUtc)

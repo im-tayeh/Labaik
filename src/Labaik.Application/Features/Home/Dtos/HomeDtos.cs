@@ -15,7 +15,8 @@ public sealed record HomeRitualDto(
     int TotalSteps,
     RitualStepDto? NextStep);
 
-public sealed record HomeGroupDto(Guid Id, string Name, string? LeaderName, int MemberCount, GroupMemberRole MyRole);
+public sealed record HomeGroupDto(
+    Guid Id, string Name, string? LeaderName, int MemberCount, GroupMemberRole MyRole, int UnreadAnnouncements);
 
 // Every section is null when it does not apply (no journey yet, no published steps, not in a group).
 public sealed record HomeDto(HomeJourneyDto? Journey, HomeRitualDto? Ritual, HomeGroupDto? Group);

@@ -122,6 +122,7 @@ try
     app.MapRitualEndpoints();
     app.MapHomeEndpoints();
     app.MapGuideEndpoints();
+    app.MapAnnouncementEndpoints();
 
     app.Run();
 }

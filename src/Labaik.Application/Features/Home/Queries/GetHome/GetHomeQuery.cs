@@ -77,6 +77,10 @@ public sealed class GetHomeQueryHandler(
 
         var myRole = group.Members.First(m => m.UserId == userId).Role;
         var leaderName = await userDirectory.GetFullNameAsync(group.LeaderId, cancellationToken);
-        return new HomeGroupDto(group.Id, group.Name, leaderName, group.MemberCount, myRole);
+
+        var unread = await context.Announcements
+            .CountAsync(a => a.GroupId == group.Id && !a.Reads.Any(r => r.UserId == userId), cancellationToken);
+
+        return new HomeGroupDto(group.Id, group.Name, leaderName, group.MemberCount, myRole, unread);
     }
 }

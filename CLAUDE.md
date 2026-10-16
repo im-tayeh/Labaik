@@ -207,8 +207,9 @@ Work the Backlog top-down without waiting for per-task orders:
 - [x] **T5 — Ihram preparation content.** Educational content module (content as
   JSON seed, same pattern as Ritual Guide).
   - _Done:_ generic `GuideArticle` aggregate keyed by (`GuideCategory`, Order); `GET /guides?category=` (default IhramPreparation) + `GET /guides/{id}`; idempotent `GuideArticleSeeder` from `ihram-preparation.json` (8 placeholder articles, pending religious approval); migration `AddGuideArticles`. New content screens = new category + JSON file._
-- [ ] **T6 — Announcements.** Group leader broadcasts to members; pilgrim lists/reads.
+- [x] **T6 — Announcements.** Group leader broadcasts to members; pilgrim lists/reads.
   `Announcement` under the Group aggregate or its own aggregate referencing GroupId.
+  - _Done:_ own `Announcement` aggregate (GroupId) created only via `Group.PostAnnouncement` (leader-only, 403 otherwise); owned `AnnouncementRead` receipts (author auto-read); `POST/GET /groups/{groupId}/announcements`, `POST /announcements/{id}/read` (idempotent, 204); non-members -> 404; `home.group.unreadAnnouncements`; `AnnouncementPosted` event ready for T8 notifications; migration `AddAnnouncements`._
 - [ ] **T7 — Family circle / live location.** Store+relay member lat/lng for
   "أين أفراد مجموعتي"; realtime via SignalR. Backend stores/relays only; map is Flutter.
 - [ ] **T8 — Chat + Notifications.** Group/direct messaging + notifications (SignalR).

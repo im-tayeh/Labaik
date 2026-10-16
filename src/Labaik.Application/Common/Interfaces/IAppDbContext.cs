@@ -1,4 +1,5 @@
-﻿using Labaik.Domain.Groups;
+﻿using Labaik.Domain.Announcements;
+using Labaik.Domain.Groups;
 using Labaik.Domain.Guides;
 using Labaik.Domain.Journeys;
 using Labaik.Domain.Rituals;
@@ -13,6 +14,7 @@ public interface IAppDbContext
     DbSet<RitualStep> RitualSteps { get; }
     DbSet<RitualProgress> RitualProgresses { get; }
     DbSet<GuideArticle> GuideArticles { get; }
+    DbSet<Announcement> Announcements { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

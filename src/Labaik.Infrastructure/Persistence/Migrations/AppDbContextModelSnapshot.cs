@@ -22,6 +22,38 @@ namespace Labaik.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Labaik.Domain.Announcements.Announcement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AuthorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("GroupId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GroupId", "CreatedAtUtc");
+
+                    b.ToTable("Announcements", (string)null);
+                });
+
             modelBuilder.Entity("Labaik.Domain.Groups.Group", b =>
                 {
                     b.Property<Guid>("Id")
@@ -439,6 +471,36 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
+                });
+
+            modelBuilder.Entity("Labaik.Domain.Announcements.Announcement", b =>
+                {
+                    b.OwnsMany("Labaik.Domain.Announcements.AnnouncementRead", "Reads", b1 =>
+                        {
+                            b1.Property<Guid>("Id")
+                                .HasColumnType("uuid");
+
+                            b1.Property<Guid>("AnnouncementId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<DateTimeOffset>("ReadAtUtc")
+                                .HasColumnType("timestamp with time zone");
+
+                            b1.Property<Guid>("UserId")
+                                .HasColumnType("uuid");
+
+                            b1.HasKey("Id");
+
+                            b1.HasIndex("AnnouncementId", "UserId")
+                                .IsUnique();
+
+                            b1.ToTable("AnnouncementReads", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("AnnouncementId");
+                        });
+
+                    b.Navigation("Reads");
                 });
 
             modelBuilder.Entity("Labaik.Domain.Groups.Group", b =>
