@@ -2,6 +2,7 @@
 using Labaik.Domain.Groups;
 using Labaik.Domain.Identity;
 using Labaik.Domain.Journeys;
+using Labaik.Domain.Rituals;
 using Labaik.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -17,6 +18,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Journey> Journeys => Set<Journey>();
     public DbSet<Group> Groups => Set<Group>();
+    public DbSet<RitualStep> RitualSteps => Set<RitualStep>();
+    public DbSet<RitualProgress> RitualProgresses => Set<RitualProgress>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

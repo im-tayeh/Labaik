@@ -1,5 +1,6 @@
 ﻿using Labaik.Domain.Groups;
 using Labaik.Domain.Journeys;
+using Labaik.Domain.Rituals;
 using Microsoft.EntityFrameworkCore;
 
 namespace Labaik.Application.Common.Interfaces;
@@ -8,6 +9,8 @@ public interface IAppDbContext
 {
     DbSet<Journey> Journeys { get; }
     DbSet<Group> Groups { get; }
+    DbSet<RitualStep> RitualSteps { get; }
+    DbSet<RitualProgress> RitualProgresses { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -146,13 +146,9 @@ No `Contracts` or `Client` project — backend only.
   is a free-text string (frontend supplies the list).
 - **Group aggregate**: create (leader), preview by join code, join by code. Unique
   join code; no double-join.
-
-### Designed in chat but NOT YET in repo (implement first — see Backlog T1, T2)
-- **Email via Brevo HTTP API** (provider-switchable `Logging`/`Smtp`/`Brevo`).
-  Currently email in the repo is SMTP/Logging only; SMTP times out on Render
-  (Render blocks outbound SMTP). Brevo API (port 443) is the fix.
-- **Ritual Guide** (`RitualStep` seeded from `umrah-steps.json` + `RitualProgress`
-  per user; list/progress/complete/reset endpoints). Content is placeholder, pending
+- **Email via Brevo HTTP API** (T1): provider-switchable `Logging`/`Smtp`/`Brevo`.
+- **Ritual Guide** (T2): `RitualStep` seeded from `umrah-steps.json` + `RitualProgress`
+  per user; list/progress/complete/reset endpoints. Content is placeholder, pending
   religious approval.
 
 ---
@@ -190,7 +186,7 @@ Work the Backlog top-down without waiting for per-task orders:
   Acceptance: with `Provider=Brevo` and a verified Brevo sender, register sends a
   real OTP email. On Render set `Email__*` env vars; remove any SMTP/personal email.
   - _Done:_ `BrevoEmailSender` via typed `HttpClient` (15s, `api-key` header); DI switch Logging/Smtp/Brevo; appsettings default `Logging`, personal email/SMTP removed; pinned patched `System.Security.Cryptography.Pkcs`/`Xml`._
-- [ ] **T2 — Ritual Guide.** `RitualStep` aggregate (PilgrimageType, Order, Phase,
+- [x] **T2 — Ritual Guide.** `RitualStep` aggregate (PilgrimageType, Order, Phase,
   Kind, Title, Body, Reference, IsPublished; unique index on (PilgrimageType,Order))
   + `RitualProgress` aggregate (UserId, PilgrimageType, CurrentOrder, owned
   `CompletedRitualStep` collection; unique index on (UserId,PilgrimageType)).
@@ -201,6 +197,7 @@ Work the Backlog top-down without waiting for per-task orders:
   Call the seeder in `Program.cs` after `MigrateAsync`. Acceptance: steps list
   returns the seeded Umrah steps; completing a step advances `CurrentOrder`;
   finishing all sets `isCompleted`.
+  - _Done:_ `Rituals` domain + 4 endpoints (`pilgrimageType` defaults to Umrah); steps complete strictly in order (409 otherwise); idempotent `RitualStepSeeder` upserts by (type, order) and unpublishes removed steps; migration `AddRitualGuide`; 10 placeholder Umrah steps (`reviewStatus: PendingReligiousApproval`)._
 - [ ] **T3 — Home screen aggregation.** `GET /api/v1/home` returning the pilgrim's
   journey status, next ritual step, and group summary in one call.
 - [ ] **T4 — Trip details view/edit.** `GET /journeys/{id}` (owner only) + edit
@@ -271,6 +268,10 @@ Work the Backlog top-down without waiting for per-task orders:
 - **Render blocks outbound SMTP** — use the Brevo HTTP API for production email.
 - Value objects -> `OwnsOne`; child collections -> `OwnsMany` with
   `UsePropertyAccessMode(PropertyAccessMode.Field)`.
+- **Appending to an `OwnsMany` of an already-saved aggregate**: the client-generated
+  Guid key makes EF treat the new child as existing (UPDATE of 0 rows ->
+  `DbUpdateConcurrencyException`). Configure the owned key `ValueGeneratedNever()`
+  (see `RitualProgressConfiguration`).
 
 ---
 

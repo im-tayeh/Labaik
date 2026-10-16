@@ -135,6 +135,77 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                     b.ToTable("Journeys", (string)null);
                 });
 
+            modelBuilder.Entity("Labaik.Domain.Rituals.RitualProgress", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("CurrentOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PilgrimageType")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("StartedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "PilgrimageType")
+                        .IsUnique();
+
+                    b.ToTable("RitualProgresses", (string)null);
+                });
+
+            modelBuilder.Entity("Labaik.Domain.Rituals.RitualStep", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Phase")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PilgrimageType")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Reference")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PilgrimageType", "Order")
+                        .IsUnique();
+
+                    b.ToTable("RitualSteps", (string)null);
+                });
+
             modelBuilder.Entity("Labaik.Infrastructure.Identity.ApplicationUser", b =>
                 {
                     b.Property<Guid>("Id")
@@ -431,6 +502,36 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                     b.Navigation("ArrivalPlan");
 
                     b.Navigation("Stays");
+                });
+
+            modelBuilder.Entity("Labaik.Domain.Rituals.RitualProgress", b =>
+                {
+                    b.OwnsMany("Labaik.Domain.Rituals.CompletedRitualStep", "CompletedSteps", b1 =>
+                        {
+                            b1.Property<Guid>("Id")
+                                .HasColumnType("uuid");
+
+                            b1.Property<DateTimeOffset>("CompletedAtUtc")
+                                .HasColumnType("timestamp with time zone");
+
+                            b1.Property<Guid>("RitualProgressId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<int>("StepOrder")
+                                .HasColumnType("integer");
+
+                            b1.HasKey("Id");
+
+                            b1.HasIndex("RitualProgressId", "StepOrder")
+                                .IsUnique();
+
+                            b1.ToTable("CompletedRitualSteps", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("RitualProgressId");
+                        });
+
+                    b.Navigation("CompletedSteps");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>

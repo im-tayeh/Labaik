@@ -7,6 +7,7 @@ using Labaik.Application.Common.Interfaces;
 using Labaik.Infrastructure;
 using Labaik.Infrastructure.Authentication;
 using Labaik.Infrastructure.Persistence;
+using Labaik.Infrastructure.Persistence.Seed;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -91,6 +92,9 @@ try
     {
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await dbContext.Database.MigrateAsync();
+
+        var seedLogger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Seed");
+        await RitualStepSeeder.SeedAsync(dbContext, seedLogger);
     }
 
     // One tidy structured line per HTTP request (method, path, status, elapsed ms).
@@ -114,6 +118,7 @@ try
     app.MapAuthEndpoints();
     app.MapJourneyEndpoints();
     app.MapGroupEndpoints();
+    app.MapRitualEndpoints();
 
     app.Run();
 }
