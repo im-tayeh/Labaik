@@ -1,6 +1,7 @@
 ﻿using Asp.Versioning;
 using Labaik.Api.Extensions;
 using Labaik.Application.Features.Authentication.ForgotPassword;
+using Labaik.Application.Features.Authentication.GoogleSignIn;
 using Labaik.Application.Features.Authentication.Login;
 using Labaik.Application.Features.Authentication.RefreshToken;
 using Labaik.Application.Features.Authentication.Register;
@@ -48,6 +49,13 @@ public static class AuthEndpoints
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         })
         .WithSummary("Authenticate and receive tokens");
+
+        group.MapPost("/google", async (GoogleSignInCommand command, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(command, ct);
+            return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
+        })
+        .WithSummary("Sign in with a Google ID token (links by verified email or creates the account)");
 
         group.MapPost("/refresh-token", async (RefreshTokenCommand command, ISender sender, CancellationToken ct) =>
         {

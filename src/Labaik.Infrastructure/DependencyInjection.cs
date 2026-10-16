@@ -78,6 +78,10 @@ public static class DependencyInjection
 
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 
+        services.AddOptions<GoogleAuthSettings>()
+            .Bind(configuration.GetSection(GoogleAuthSettings.SectionName));
+        services.AddScoped<IGoogleTokenValidator, GoogleTokenValidator>();
+
         services.AddScoped<IRefreshTokenService, RefreshTokenService>();
 
         services.AddScoped<IJoinCodeGenerator, JoinCodeGenerator>();

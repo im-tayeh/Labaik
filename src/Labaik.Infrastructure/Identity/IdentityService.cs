@@ -83,6 +83,66 @@ internal sealed class IdentityService(
         return await BuildAuthUserAsync(user);
     }
 
+    public async Task<Result<AuthUser>> ExternalSignInAsync(
+        ExternalIdentity identity, CancellationToken cancellationToken = default)
+    {
+        // 1) Already linked.
+        var linked = await userManager.FindByLoginAsync(identity.Provider, identity.Subject);
+        if (linked is not null)
+        {
+            return await BuildAuthUserAsync(linked);
+        }
+
+        // Linking or creating by email is only safe when the provider vouches for the address.
+        if (!identity.EmailVerified)
+        {
+            return Error.Unauthorized("Auth.ExternalEmailNotVerified", "The external account's email is not verified.");
+        }
+
+        var user = await userManager.FindByEmailAsync(identity.Email);
+        if (user is not null)
+        {
+            // 2) Existing account with the same email -> link it.
+            if (!user.EmailConfirmed)
+            {
+                // Whoever registered this unconfirmed account never proved owning the email:
+                // drop their password so it cannot be used to enter the real owner's account.
+                if (await userManager.HasPasswordAsync(user))
+                {
+                    var removed = await userManager.RemovePasswordAsync(user);
+                    if (!removed.Succeeded) return IdentityFailure("Auth.ExternalLinkFailed", removed);
+                }
+
+                user.EmailConfirmed = true;
+                var updated = await userManager.UpdateAsync(user);
+                if (!updated.Succeeded) return IdentityFailure("Auth.ExternalLinkFailed", updated);
+            }
+        }
+        else
+        {
+            // 3) New account without a password.
+            user = new ApplicationUser
+            {
+                Id = Guid.NewGuid(),
+                FullName = string.IsNullOrWhiteSpace(identity.FullName) ? identity.Email : identity.FullName.Trim(),
+                Email = identity.Email,
+                UserName = identity.Email,
+                EmailConfirmed = true
+            };
+
+            var created = await userManager.CreateAsync(user);
+            if (!created.Succeeded) return IdentityFailure("User.CreationFailed", created);
+        }
+
+        var login = await userManager.AddLoginAsync(user, new UserLoginInfo(identity.Provider, identity.Subject, identity.Provider));
+        if (!login.Succeeded) return IdentityFailure("Auth.ExternalLinkFailed", login);
+
+        return await BuildAuthUserAsync(user);
+    }
+
+    private static Error IdentityFailure(string code, IdentityResult result)
+        => Error.Failure(code, string.Join(" ", result.Errors.Select(e => e.Description)));
+
     private async Task<AuthUser> BuildAuthUserAsync(ApplicationUser user)
     {
         var roles = await userManager.GetRolesAsync(user);
