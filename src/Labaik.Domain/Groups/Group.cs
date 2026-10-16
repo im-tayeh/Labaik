@@ -1,4 +1,5 @@
 ﻿using Labaik.Domain.Announcements;
+using Labaik.Domain.Chat;
 using Labaik.Domain.Common;
 using Labaik.Domain.Common.Results;
 using Labaik.Domain.Groups.Enums;
@@ -63,6 +64,17 @@ public sealed class Group : AggregateRoot
         }
 
         return Announcement.Create(Id, authorId, title, body, postedAtUtc);
+    }
+
+    // Any member may chat in the group. The new ChatMessage is its own aggregate; this group is not modified.
+    public Result<ChatMessage> PostMessage(Guid senderId, string body, DateTimeOffset sentAtUtc)
+    {
+        if (!IsMember(senderId))
+        {
+            return ChatErrors.NotMember;
+        }
+
+        return ChatMessage.Create(Id, senderId, body, sentAtUtc);
     }
 
     public Result Join(Guid userId, DateTimeOffset joinedAtUtc)

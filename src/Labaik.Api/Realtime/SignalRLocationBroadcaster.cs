@@ -20,7 +20,7 @@ internal sealed class SignalRLocationBroadcaster(
         try
         {
             await hubContext.Clients
-                .Groups(groupIds.Select(LocationHub.GroupName).ToList())
+                .Groups(groupIds.Select(GroupSubscribedHub.GroupName).ToList())
                 .SendAsync(method, payload, cancellationToken);
         }
         catch (Exception ex)

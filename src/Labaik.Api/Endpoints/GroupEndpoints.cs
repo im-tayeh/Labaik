@@ -3,6 +3,9 @@ using Asp.Versioning.Builder;
 using Labaik.Api.Extensions;
 using Labaik.Application.Features.Announcements.Commands.PostAnnouncement;
 using Labaik.Application.Features.Announcements.Queries.GetGroupAnnouncements;
+using Labaik.Application.Common.Models;
+using Labaik.Application.Features.Chat.Commands.SendChatMessage;
+using Labaik.Application.Features.Chat.Queries.GetChatMessages;
 using Labaik.Application.Features.Groups.Commands.CreateGroup;
 using Labaik.Application.Features.Groups.Commands.JoinGroup;
 using Labaik.Application.Features.Groups.Queries.GetGroupByCode;
@@ -60,6 +63,20 @@ public static class GroupEndpoints
             var result = await sender.Send(new GetGroupMemberLocationsQuery(groupId), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         }).WithSummary("Where are my group members: every member with their shared position (members only)");
+
+        group.MapPost("/{groupId:guid}/messages", async (Guid groupId, SendChatMessageRequest body, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new SendChatMessageCommand(groupId, body.Body), ct);
+            return result.IsSuccess
+                ? Results.Created($"/api/v1/groups/{groupId}/messages", result.Value)
+                : result.Error!.ToProblem();
+        }).WithSummary("Send a message to the group chat (members only)");
+
+        group.MapGet("/{groupId:guid}/messages", async (Guid groupId, ISender sender, CancellationToken ct, DateTimeOffset? before, int take = Paging.DefaultTake) =>
+        {
+            var result = await sender.Send(new GetChatMessagesQuery(groupId, before, take), ct);
+            return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
+        }).WithSummary("Group chat history, newest first (cursor: before = oldest sentAtUtc; members only)");
 
         return app;
     }

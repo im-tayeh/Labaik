@@ -34,7 +34,10 @@ public sealed class GetHomeQueryHandler(
         var ritual = await GetRitualAsync(userId, journey?.PilgrimageType ?? PilgrimageType.Umrah, cancellationToken);
         var group = await GetGroupAsync(userId, cancellationToken);
 
-        return new HomeDto(journey, ritual, group);
+        var unreadNotifications = await context.Notifications
+            .CountAsync(n => n.UserId == userId && n.ReadAtUtc == null, cancellationToken);
+
+        return new HomeDto(journey, ritual, group, unreadNotifications);
     }
 
     private async Task<HomeRitualDto?> GetRitualAsync(Guid userId, PilgrimageType type, CancellationToken cancellationToken)

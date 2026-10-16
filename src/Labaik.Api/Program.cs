@@ -10,6 +10,7 @@ using Labaik.Infrastructure.Authentication;
 using Labaik.Infrastructure.Persistence;
 using Labaik.Infrastructure.Persistence.Seed;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
@@ -104,6 +105,8 @@ try
 
     builder.Services.AddSignalR();
     builder.Services.AddScoped<ILocationBroadcaster, SignalRLocationBroadcaster>();
+    builder.Services.AddScoped<IRealtimeNotifier, SignalRRealtimeNotifier>();
+    builder.Services.AddSingleton<IUserIdProvider, SubClaimUserIdProvider>();
 
     var app = builder.Build();
 
@@ -143,7 +146,9 @@ try
     app.MapGuideEndpoints();
     app.MapAnnouncementEndpoints();
     app.MapLocationEndpoints();
+    app.MapNotificationEndpoints();
     app.MapHub<LocationHub>(LocationHub.Path);
+    app.MapHub<EventsHub>(EventsHub.Path);
 
     app.Run();
 }

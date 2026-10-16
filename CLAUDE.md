@@ -213,7 +213,8 @@ Work the Backlog top-down without waiting for per-task orders:
 - [x] **T7 — Family circle / live location.** Store+relay member lat/lng for
   "أين أفراد مجموعتي"; realtime via SignalR. Backend stores/relays only; map is Flutter.
   - _Done:_ `LocationShare` aggregate (one per user, last position only, opt-in, stop = erase, stale after 15 min); `GET /location/me`, `PUT /location/sharing`, `POST /location`, `GET /groups/{groupId}/locations` (members only); SignalR hub `/hubs/location` (JWT via `?access_token=`; client `UpdateLocation`, server `LocationUpdated`/`StoppedSharing`), pushed via domain events + `ILocationBroadcaster` so REST and hub updates both broadcast; migration `AddLocationSharing`. Hub subscribes groups at connect time (reconnect after joining a group)._
-- [ ] **T8 — Chat + Notifications.** Group/direct messaging + notifications (SignalR).
+- [x] **T8 — Chat + Notifications.** Group/direct messaging + notifications (SignalR).
+  - _Done (scope agreed: group chat only, in-app notifications only; direct messages and FCM push deferred):_ `ChatMessage` aggregate via `Group.PostMessage` (members only); `POST/GET /groups/{groupId}/messages` (cursor `before`, `take` ≤ 100); `Notification` aggregate stores type + ids + preview (no sentences; Flutter localizes), created from `AnnouncementPosted` (members) and `MemberJoinedGroup` (leader); `GET /notifications`, `GET /notifications/unread-count`, `POST /notifications/{id}/read`, `POST /notifications/read-all`; `home.unreadNotifications`; hub `/hubs/events` (`MessageReceived` to group, `NotificationReceived` to user via `sub` user-id provider); shared `GroupSubscribedHub` base; migration `AddChatAndNotifications`._
 - [ ] **T9 — Google sign-in.** Flutter sends a Google ID token; backend validates it
   (Google token validation) and issues our JWT (link/create `ApplicationUser`).
 - [ ] **T10 — Role-based access.** Supervisor vs Pilgrim authorization policies and
