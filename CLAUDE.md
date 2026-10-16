@@ -201,8 +201,9 @@ Work the Backlog top-down without waiting for per-task orders:
 - [x] **T3 — Home screen aggregation.** `GET /api/v1/home` returning the pilgrim's
   journey status, next ritual step, and group summary in one call.
   - _Done:_ read-only `GetHomeQuery` -> `HomeDto { journey?, ritual?, group? }` (null sections when not applicable); ritual type follows the journey (default Umrah), `isStarted=false` shows the first step without creating progress; group = most recently joined, with `myRole`._
-- [ ] **T4 — Trip details view/edit.** `GET /journeys/{id}` (owner only) + edit
+- [x] **T4 — Trip details view/edit.** `GET /journeys/{id}` (owner only) + edit
   endpoints matching the Figma "تفاصيل الرحلة / تعديل تفاصيل الرحلة" screens.
+  - _Done:_ `GET /journeys/{id}` + `PUT /journeys/{id}` (full replace of isFirstTime, travelParty, arrival, stays; `pilgrimageType` not editable); editable while Draft or Ready (409 after); non-owner -> 404; stays ordered by arrival; `JourneyStays` key `ValueGeneratedNever`._
 - [ ] **T5 — Ihram preparation content.** Educational content module (content as
   JSON seed, same pattern as Ritual Guide).
 - [ ] **T6 — Announcements.** Group leader broadcasts to members; pilgrim lists/reads.
@@ -252,8 +253,9 @@ Work the Backlog top-down without waiting for per-task orders:
 ## 11. Hard-Won Gotchas (do not repeat)
 
 - **`OwnsMany` + clear-and-re-add across requests -> `DbUpdateConcurrencyException`.**
-  Build the whole aggregate and save once (all inserts). Journey onboarding is a
-  single `POST` for this reason.
+  Root cause: see the `ValueGeneratedNever()` gotcha below (now applied to
+  `JourneyStays`, `GroupMembers`, `CompletedRitualSteps`). Still prefer building the
+  aggregate and saving once per command.
 - **`PendingModelChangesWarning` on startup** = model changed without a matching
   migration. Add one. In early dev, resetting migrations (drop DB + delete
   `Persistence/Migrations/*` + one fresh `InitialCreate`) is acceptable; never in prod.

@@ -26,6 +26,9 @@ public static class JourneyErrors
     public static Error InvalidStatusTransition(JourneyStatus from, JourneyStatus to) =>
         Error.Conflict("Journey.InvalidTransition", $"Cannot move a journey from '{from}' to '{to}'.");
 
-    public static Error CityRequired => 
+    public static Error NotFound =>
+        Error.NotFound("Journey.NotFound", "The journey was not found.");
+
+    public static Error CityRequired =>
         Error.Validation("Journey.CityRequired", "City name is required.");
 }

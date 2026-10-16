@@ -18,7 +18,8 @@ public sealed class Journey : AggregateRoot
     private readonly List<Stay> _stays = [];
     public IReadOnlyList<Stay> Stays => _stays.AsReadOnly();
 
-    private bool IsEditable => Status is JourneyStatus.Draft;
+    // Details stay editable until the journey starts (Active).
+    private bool IsEditable => Status is JourneyStatus.Draft or JourneyStatus.Ready;
 
     private Journey() { } // EF
 
@@ -45,6 +46,18 @@ public sealed class Journey : AggregateRoot
         return new Journey(userId, type, isFirstTime, party);
     }
 
+    public Result UpdateDetails(bool isFirstTime, TravelParty party)
+    {
+        if (!IsEditable)
+        {
+            return Result.Failure(JourneyErrors.NotEditable(Status));
+        }
+
+        IsFirstTime = isFirstTime;
+        TravelParty = party;
+        return Result.Success();
+    }
+
     public Result SetArrivalPlan(TransportMode mode, string entryPoint)
     {
         if (!IsEditable)
@@ -68,6 +81,31 @@ public sealed class Journey : AggregateRoot
         if (string.IsNullOrWhiteSpace(placeName)) return Result.Failure(JourneyErrors.PlaceNameRequired);
 
         _stays.Add(new Stay(cityName.Trim(), type, placeName.Trim(), arrivalAtUtc));
+        return Result.Success();
+    }
+
+    // Replaces all stays atomically: validates every stay first, so a failure changes nothing.
+    public Result ReplaceStays(IReadOnlyList<StayDetails> stays)
+    {
+        if (!IsEditable)
+        {
+            return Result.Failure(JourneyErrors.NotEditable(Status));
+        }
+
+        if (stays.Count == 0 && Status is not JourneyStatus.Draft)
+        {
+            return Result.Failure(JourneyErrors.StayRequired);
+        }
+
+        foreach (var s in stays)
+        {
+            if (string.IsNullOrWhiteSpace(s.CityName)) return Result.Failure(JourneyErrors.CityRequired);
+            if (string.IsNullOrWhiteSpace(s.PlaceName)) return Result.Failure(JourneyErrors.PlaceNameRequired);
+        }
+
+        _stays.Clear();
+        _stays.AddRange(stays.Select(s =>
+            new Stay(s.CityName.Trim(), s.AccommodationType, s.PlaceName.Trim(), s.ArrivalAtUtc)));
         return Result.Success();
     }
 

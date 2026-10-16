@@ -25,6 +25,7 @@ internal sealed class JourneyConfiguration : IEntityTypeConfiguration<Journey>
             s.ToTable("JourneyStays");
             s.WithOwner().HasForeignKey("JourneyId");
             s.HasKey(x => x.Id);   // use the existing Guid key
+            s.Property(x => x.Id).ValueGeneratedNever(); // replaced stays on a saved journey must INSERT, not UPDATE
             s.Property(x => x.CityName).HasMaxLength(100);
             s.Property(x => x.PlaceName).HasMaxLength(200);
         });
