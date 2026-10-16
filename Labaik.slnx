@@ -16,4 +16,8 @@
     <Project Path="src/Labaik.Domain/Labaik.Domain.csproj" />
     <Project Path="src/Labaik.Infrastructure/Labaik.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Labaik.Api.IntegrationTests/Labaik.Api.IntegrationTests.csproj" />
+    <Project Path="tests/Labaik.Domain.Tests/Labaik.Domain.Tests.csproj" />
+  </Folder>
 </Solution>

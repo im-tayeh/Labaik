@@ -31,3 +31,8 @@ jobs:
 
       - name: Build (Release)
         run: dotnet build --configuration Release --no-restore
+
+      # Domain unit tests + API integration tests (Testcontainers starts PostgreSQL in Docker,
+      # which GitHub's ubuntu runners provide).
+      - name: Test
+        run: dotnet test --configuration Release --no-build --verbosity normal

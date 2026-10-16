@@ -162,3 +162,4 @@ finally
 {
     Log.CloseAndFlush();
 }
+public partial class Program; // exposes the entry point to WebApplicationFactory in integration tests

@@ -221,9 +221,10 @@ Work the Backlog top-down without waiting for per-task orders:
 - [x] **T10 — Role-based access.** Supervisor vs Pilgrim authorization policies and
   screen gating.
   - _Done:_ roles `Admin`/`Supervisor` (pilgrim = no role), seeded by `RoleSeeder`; `Admin:Emails` (env `Admin__Emails__0..n`) bootstraps Admin on any token issue; policies `Admin`, `Supervisor` (Supervisor or Admin); `POST /groups` now Supervisor-only (**breaking**: pilgrims get 403); `GET /admin/users?email=`, `PUT|DELETE /admin/users/{id}/supervisor` (applies from next token/refresh); roles exposed in login `user.roles` and `/auth/me`. Group leadership stays per-group (announcements remain leader-only)._
-- [ ] **T11 — Tests.** xUnit. Start with Domain unit tests (aggregates/state
+- [x] **T11 — Tests.** xUnit. Start with Domain unit tests (aggregates/state
   machines), then integration tests (Testcontainers) for key endpoints. Wire
   `dotnet test` into CI.
+  - _Done:_ `tests/Labaik.Domain.Tests` (36 tests: Journey, Group, RitualProgress, LocationShare, content, announcements, notifications) and `tests/Labaik.Api.IntegrationTests` (21 tests over HTTP: auth, journeys, rituals, guides, home, groups/roles, announcements, notifications, chat, locations) on one shared `WebApplicationFactory` + `postgres:17` Testcontainer (`ICollectionFixture`; Serilog's bootstrap logger allows one host per process) with a capturing `IEmailSender` for OTPs; `dotnet test` step in CI; `EntityFrameworkCore.Relational` pinned to 10.0.12. New slices must add tests here._
 
 ---
 
@@ -232,8 +233,9 @@ Work the Backlog top-down without waiting for per-task orders:
 - **Docker**: multi-stage, non-root (`USER $APP_UID`), listens on **8080**, honors
   Render's dynamic `PORT`.
 - **CI** `.github/workflows/ci.yml`: on push/PR to `main` — restore,
-  vulnerable-package audit (fails on any known vuln), build Release. (Add
-  `dotnet test` once T11 lands.)
+  vulnerable-package audit (fails on any known vuln), build Release, `dotnet test`
+  (integration tests need Docker; run `docker compose up -d` is NOT required —
+  Testcontainers starts its own PostgreSQL).
 - **Hosting**: Render free tier; auto-deploy on push to `main`; instances sleep
   after ~15 min idle (first request ~50s cold start — normal).
 - **DB on Render**: managed PostgreSQL. **Migrations auto-apply on startup**
