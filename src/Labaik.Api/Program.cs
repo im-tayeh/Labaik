@@ -149,6 +149,7 @@ try
     app.MapNotificationEndpoints();
     app.MapAdminEndpoints();
     app.MapCompanyEndpoints();
+    app.MapProfileEndpoints();
     app.MapHub<LocationHub>(LocationHub.Path);
     app.MapHub<EventsHub>(EventsHub.Path);
 

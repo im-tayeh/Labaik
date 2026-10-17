@@ -34,6 +34,7 @@ internal sealed class GroupConfiguration : IEntityTypeConfiguration<Group>
             m.HasKey(x => x.Id);
             m.Property(x => x.Id).ValueGeneratedNever(); // new members on a saved group must INSERT, not UPDATE
             m.HasIndex(nameof(GroupMember.UserId), "GroupId").IsUnique(); // no double-join
+            m.Property(x => x.Notes).HasMaxLength(GroupMember.NotesMaxLength);
         });
 
         builder.Navigation(g => g.Members).UsePropertyAccessMode(PropertyAccessMode.Field);

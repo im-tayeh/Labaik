@@ -325,6 +325,7 @@ in T13 is the core of it. Build the rest of F after A if time is tight.
 - Add: `MemberNumberInGroup`, `Gender`, `Nationality`, `HealthNotes`, `Notes`, `PhotoUrl`, `Email`.
 - `HealthNotes` is sensitive PII — restrict to supervisor/company, never in public DTOs.
 - `GET /groups/{groupId}/members/{userId}` (supervisor).
+- _Done:_ personal fields in a new `PilgrimProfile` aggregate (`Gender` 1/2, `Nationality` ISO alpha-2, `PhotoUrl` https, `HealthNotes`), written **by the pilgrim** via `GET/PUT /me/profile`; `GroupMember` gains `MemberNumber` (auto, join order, never reused via `Group.LastMemberNumber`; migration backfills existing pilgrims) and supervisor `Notes` (`PUT /groups/{groupId}/members/{userId}/notes`); `Email` from the account. `GroupMemberDetailsDto` (with `HealthNotes`) is returned **only** to the group's supervisor — never reuse it in lists. **Open:** no file upload service (PhotoUrl is a URL); company read access to member cards not built yet. Migration `AddMemberProfiles`.
 
 **T21 — Announcement enrichment**
 - Add fields (never rename): `Importance` (1 Normal / 2 Important), `GatheringTimeUtc?`, `Location?`, `ImageUrl?`, `Audience` (1 Group / 2 AllCompanyPilgrims).

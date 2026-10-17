@@ -216,4 +216,32 @@ public class CompanyGroupDomainTests
         Assert.True(group.ResetAttendance(supervisor).IsSuccess);
         Assert.Equal(AttendanceStatus.Absent, Pilgrim().AttendanceStatus);
     }
+
+    [Fact]
+    public void Pilgrims_are_numbered_in_join_order_and_numbers_are_never_reused()
+    {
+        var group = NewTripGroup();
+        var (a, b, c) = (Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid());
+        group.AddMember(a, Now);
+        group.AddMember(b, Now);
+        group.RemoveMember(b);
+        group.AddMember(c, Now);
+
+        Assert.Equal(1, group.Members.Single(m => m.UserId == a).MemberNumber);
+        Assert.Equal(3, group.Members.Single(m => m.UserId == c).MemberNumber);
+    }
+
+    [Fact]
+    public void Only_the_supervisor_writes_member_notes()
+    {
+        var group = NewTripGroup();
+        var supervisor = Guid.NewGuid();
+        var pilgrim = Guid.NewGuid();
+        group.AssignSupervisor(supervisor, Now);
+        group.AddMember(pilgrim, Now);
+
+        Assert.Equal("Group.NotLeader", group.SetMemberNotes(pilgrim, pilgrim, "x").Error!.Code);
+        Assert.True(group.SetMemberNotes(supervisor, pilgrim, " Needs a wheelchair ").IsSuccess);
+        Assert.Equal("Needs a wheelchair", group.Members.Single(m => m.UserId == pilgrim).Notes);
+    }
 }

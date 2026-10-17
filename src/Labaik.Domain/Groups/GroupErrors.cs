@@ -27,6 +27,9 @@ public static class GroupErrors
     public static Error InvalidAttendanceStatus =>
         Error.Validation("Group.InvalidAttendanceStatus", "Attendance status must be Present (1) or Absent (2).");
 
+    public static Error NotesTooLong =>
+        Error.Validation("Group.NotesTooLong", "Member notes must be at most 2000 characters.");
+
     public static Error MemberNotFound =>
         Error.NotFound("Group.MemberNotFound", "The user is not a member of this group.");
 

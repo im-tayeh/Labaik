@@ -212,4 +212,31 @@ public class GroupTests(LabaikApiFactory factory)
         var reset = await s.Leader.Client.PostAsync($"{baseUrl}/reset", null);
         Assert.Equal(0, (await reset.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("presentCount").GetInt32());
     }
+
+    [Fact]
+    public async Task Member_card_with_health_notes_is_for_the_supervisor_only()
+    {
+        var s = await SetupAsync();
+        var profile = await s.Member.Client.PutAsJsonAsync("/api/v1/me/profile",
+            new { gender = 2, nationality = "jo", photoUrl = "https://cdn.example.com/m.jpg", healthNotes = "Diabetic" });
+        Assert.Equal(HttpStatusCode.OK, profile.StatusCode);
+        Assert.Equal("JO", (await s.Member.Client.GetFromJsonAsync<JsonElement>("/api/v1/me/profile")).GetProperty("nationality").GetString());
+
+        var notesUrl = $"/api/v1/groups/{s.GroupId}/members/{s.Member.Id}/notes";
+        Assert.Equal(HttpStatusCode.NoContent, (await s.Leader.Client.PutAsJsonAsync(notesUrl, new { notes = "Needs a wheelchair" })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await s.Member.Client.PutAsJsonAsync(notesUrl, new { notes = "x" })).StatusCode);
+
+        var cardUrl = $"/api/v1/groups/{s.GroupId}/members/{s.Member.Id}";
+        var card = await s.Leader.Client.GetFromJsonAsync<JsonElement>(cardUrl);
+        Assert.Equal("Diabetic", card.GetProperty("healthNotes").GetString());
+        Assert.Equal("Needs a wheelchair", card.GetProperty("notes").GetString());
+        Assert.Equal(1, card.GetProperty("memberNumberInGroup").GetInt32());
+        Assert.Equal(s.Member.Email, card.GetProperty("email").GetString());
+        Assert.Equal(2, card.GetProperty("gender").GetInt32());
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await s.Member.Client.GetAsync(cardUrl)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await s.Outsider.Client.GetAsync(cardUrl)).StatusCode);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity,
+            (await s.Member.Client.PutAsJsonAsync("/api/v1/me/profile", new { nationality = "JORDAN" })).StatusCode);
+    }
 }

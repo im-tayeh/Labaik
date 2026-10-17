@@ -26,6 +26,9 @@ public sealed class Group : AggregateRoot
     // Null until the supervisor sets one.
     public GatheringPoint? GatheringPoint { get; private set; }
 
+    // Highest pilgrim number handed out so far (numbers are never reused after a removal).
+    public int LastMemberNumber { get; private set; }
+
     public int MemberCount => _members.Count;
     public int PilgrimCount => _members.Count(m => m.Role == GroupMemberRole.Member);
     public bool HasSupervisor => LeaderId is not null;
@@ -232,6 +235,30 @@ public sealed class Group : AggregateRoot
         return Result.Success();
     }
 
+    // The supervisor's private notes about a member (null clears them).
+    public Result SetMemberNotes(Guid byUserId, Guid memberId, string? notes)
+    {
+        if (LeaderId != byUserId)
+        {
+            return Result.Failure(GroupErrors.NotLeader);
+        }
+
+        var member = _members.FirstOrDefault(m => m.UserId == memberId);
+        if (member is null)
+        {
+            return Result.Failure(GroupErrors.MemberNotFound);
+        }
+
+        notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
+        if (notes is { Length: > GroupMember.NotesMaxLength })
+        {
+            return Result.Failure(GroupErrors.NotesTooLong);
+        }
+
+        member.SetNotes(notes);
+        return Result.Success();
+    }
+
     // Supervisor starts a new roll call: every pilgrim back to Absent.
     public Result ResetAttendance(Guid byUserId)
     {
@@ -278,7 +305,8 @@ public sealed class Group : AggregateRoot
             return Result.Failure(GroupErrors.AlreadyMember);
         }
 
-        _members.Add(new GroupMember(userId, GroupMemberRole.Member, joinedAtUtc));
+        LastMemberNumber++;
+        _members.Add(new GroupMember(userId, GroupMemberRole.Member, joinedAtUtc, LastMemberNumber));
         Raise(new MemberJoinedGroup(Id, userId));
 
         // Pilgrims are now waiting in a company group with nobody responsible: tell the company once.

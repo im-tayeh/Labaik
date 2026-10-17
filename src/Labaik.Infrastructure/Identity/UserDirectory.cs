@@ -12,6 +12,12 @@ internal sealed class UserDirectory(UserManager<ApplicationUser> userManager) : 
         return user?.FullName;
     }
 
+    public async Task<UserContact?> GetContactAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var user = await userManager.FindByIdAsync(userId.ToString());
+        return user is null ? null : new UserContact(user.Id, user.FullName, user.Email);
+    }
+
     public async Task<IReadOnlyDictionary<Guid, string>> GetFullNamesAsync(
         IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken = default)
         => await userManager.Users

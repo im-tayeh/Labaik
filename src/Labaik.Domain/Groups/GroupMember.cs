@@ -5,9 +5,18 @@ namespace Labaik.Domain.Groups;
 
 public sealed class GroupMember : Entity
 {
+    public const int NotesMaxLength = 2000;
+
     public Guid UserId { get; private set; }
     public GroupMemberRole Role { get; private set; }
     public DateTimeOffset JoinedAtUtc { get; private set; }
+
+    // Pilgrims are numbered 1, 2, 3... in join order; numbers are never reused. Null for the supervisor
+    // unless they were a numbered pilgrim before being promoted.
+    public int? MemberNumber { get; private set; }
+
+    // The supervisor's private notes about this member.
+    public string? Notes { get; private set; }
 
     // Attendance at the current gathering (pilgrims only); Absent until confirmed.
     public AttendanceStatus AttendanceStatus { get; private set; } = AttendanceStatus.Absent;
@@ -15,14 +24,17 @@ public sealed class GroupMember : Entity
 
     private GroupMember() { } // EF
 
-    internal GroupMember(Guid userId, GroupMemberRole role, DateTimeOffset joinedAtUtc)
+    internal GroupMember(Guid userId, GroupMemberRole role, DateTimeOffset joinedAtUtc, int? memberNumber = null)
     {
         UserId = userId;
         Role = role;
         JoinedAtUtc = joinedAtUtc;
+        MemberNumber = memberNumber;
     }
 
     internal void PromoteToLeader() => Role = GroupMemberRole.Leader;
+
+    internal void SetNotes(string? notes) => Notes = notes;
 
     internal void SetAttendance(AttendanceStatus status, DateTimeOffset nowUtc)
     {

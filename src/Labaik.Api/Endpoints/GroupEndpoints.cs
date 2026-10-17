@@ -10,6 +10,8 @@ using Labaik.Application.Features.Groups.Commands.Attendance;
 using Labaik.Application.Features.Groups.Commands.CreateGroup;
 using Labaik.Application.Features.Groups.Commands.JoinGroup;
 using Labaik.Application.Features.Groups.Commands.SetGatheringPoint;
+using Labaik.Application.Features.Groups.Commands.SetMemberNotes;
+using Labaik.Application.Features.Groups.Queries.GetGroupMember;
 using Labaik.Application.Features.Groups.Queries.GetGatheringPoint;
 using Labaik.Application.Features.Groups.Queries.GetGroupAttendance;
 using Labaik.Application.Features.Groups.Queries.GetGroupByCode;
@@ -112,6 +114,18 @@ public static class GroupEndpoints
             var result = await sender.Send(new ResetAttendanceCommand(groupId), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         }).WithSummary("Start a new roll call: every pilgrim back to absent (group supervisor only)");
+
+        group.MapGet("/{groupId:guid}/members/{userId:guid}", async (Guid groupId, Guid userId, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new GetGroupMemberQuery(groupId, userId), ct);
+            return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
+        }).WithSummary("Member card incl. health notes (group supervisor only)");
+
+        group.MapPut("/{groupId:guid}/members/{userId:guid}/notes", async (Guid groupId, Guid userId, SetMemberNotesRequest body, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new SetMemberNotesCommand(groupId, userId, body.Notes), ct);
+            return result.IsSuccess ? Results.NoContent() : result.Error!.ToProblem();
+        }).WithSummary("Supervisor's private notes about a member (null clears)");
 
         group.MapPost("/{groupId:guid}/messages", async (Guid groupId, SendChatMessageRequest body, ISender sender, CancellationToken ct) =>
         {

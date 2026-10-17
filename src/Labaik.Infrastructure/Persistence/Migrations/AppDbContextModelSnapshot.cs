@@ -121,6 +121,9 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<int>("LastMemberNumber")
+                        .HasColumnType("integer");
+
                     b.Property<Guid?>("LeaderId")
                         .HasColumnType("uuid");
 
@@ -333,6 +336,41 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                     b.HasIndex("UserId", "ReadAtUtc");
 
                     b.ToTable("Notifications", (string)null);
+                });
+
+            modelBuilder.Entity("Labaik.Domain.Profiles.PilgrimProfile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("Gender")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("HealthNotes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Nationality")
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<string>("PhotoUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("PilgrimProfiles", (string)null);
                 });
 
             modelBuilder.Entity("Labaik.Domain.Rituals.RitualProgress", b =>
@@ -713,6 +751,13 @@ namespace Labaik.Infrastructure.Persistence.Migrations
 
                             b1.Property<DateTimeOffset>("JoinedAtUtc")
                                 .HasColumnType("timestamp with time zone");
+
+                            b1.Property<int?>("MemberNumber")
+                                .HasColumnType("integer");
+
+                            b1.Property<string>("Notes")
+                                .HasMaxLength(2000)
+                                .HasColumnType("character varying(2000)");
 
                             b1.Property<int>("Role")
                                 .HasColumnType("integer");

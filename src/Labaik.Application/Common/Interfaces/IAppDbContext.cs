@@ -6,6 +6,7 @@ using Labaik.Domain.Groups;
 using Labaik.Domain.Guides;
 using Labaik.Domain.Journeys;
 using Labaik.Domain.Locations;
+using Labaik.Domain.Profiles;
 using Labaik.Domain.Rituals;
 using Labaik.Domain.Trips;
 using Microsoft.EntityFrameworkCore;
@@ -25,6 +26,7 @@ public interface IAppDbContext
     DbSet<Notification> Notifications { get; }
     DbSet<Company> Companies { get; }
     DbSet<Trip> Trips { get; }
+    DbSet<PilgrimProfile> PilgrimProfiles { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
