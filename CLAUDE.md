@@ -339,6 +339,7 @@ in T13 is the core of it. Build the rest of F after A if time is tight.
 **T23 — Trip itinerary**
 - Domain: `ItineraryDay` + `ItineraryActivity` (`Title`, `TimeUtc?`, `Place?`) on `Trip`/`Group`.
 - `GET /trips/{id}/itinerary`, `PUT` (company/supervisor). Fills "trip program" + "upcoming trip" card.
+- _Done:_ itinerary on **`Trip`** (shared by all its groups), stored as one **jsonb** column via `ToJson()` (`ItineraryDay` date + title? -> `ItineraryActivity` title, timeUtc?, place?), replaced whole by `Trip.ReplaceItinerary` (days within departure..return, unique dates, ≤ 60 days / 30 activities, timed activities sorted, atomic). `GET` for the owning company + supervisors/pilgrims of the trip's groups (others 404); `PUT` for the company or a trip supervisor (pilgrims 403). `home.group.tripId` added so pilgrims can find their trip. Migration `AddTripItinerary`.
 
 ---
 

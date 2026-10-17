@@ -23,6 +23,11 @@ public sealed class Trip : AggregateRoot
     private List<string> _destinations = [];
     public IReadOnlyList<string> Destinations => _destinations.AsReadOnly();
 
+    // Trip program, ordered by date (empty until set).
+    private List<ItineraryDay> _itinerary = [];
+    public IReadOnlyList<ItineraryDay> Itinerary => _itinerary.AsReadOnly();
+    public DateTimeOffset? ItineraryUpdatedAtUtc { get; private set; }
+
     private Trip() { } // EF
 
     private Trip(Guid companyId, DateTimeOffset createdAtUtc)
@@ -90,6 +95,63 @@ public sealed class Trip : AggregateRoot
         DeparturePlace = place;
         ExpectedPilgrims = details.ExpectedPilgrims;
         Notes = notes;
+        return Result.Success();
+    }
+
+    // Replaces the whole program. Validates everything first, so a failure changes nothing.
+    // Who may call this (company owner or a supervisor of the trip) is checked by the application layer,
+    // which knows the trip's groups.
+    public Result ReplaceItinerary(IReadOnlyList<ItineraryDayInput> days, DateTimeOffset nowUtc)
+    {
+        if (days.Count > TripErrors.MaxItineraryDays || days.Any(d => d.Activities.Count > TripErrors.MaxActivitiesPerDay))
+        {
+            return Result.Failure(TripErrors.ItineraryTooLarge);
+        }
+
+        if (days.Select(d => d.Date).Distinct().Count() != days.Count)
+        {
+            return Result.Failure(TripErrors.DuplicateItineraryDay);
+        }
+
+        var lastDay = ReturnDate ?? DateOnly.MaxValue;
+        if (days.Any(d => d.Date < DepartureDate || d.Date > lastDay))
+        {
+            return Result.Failure(TripErrors.ItineraryDayOutsideTrip);
+        }
+
+        static string? Clean(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+        static bool TooLong(string? s) => s is { Length: > TripErrors.ActivityTextMaxLength };
+
+        var built = new List<ItineraryDay>(days.Count);
+        foreach (var day in days.OrderBy(d => d.Date))
+        {
+            var dayTitle = Clean(day.Title);
+            var activities = new List<ItineraryActivity>(day.Activities.Count);
+            foreach (var a in day.Activities)
+            {
+                var title = Clean(a.Title);
+                var place = Clean(a.Place);
+                if (title is null || TooLong(title) || TooLong(place))
+                {
+                    return Result.Failure(TripErrors.InvalidActivity);
+                }
+
+                activities.Add(new ItineraryActivity(title, a.TimeUtc, place));
+            }
+
+            if (TooLong(dayTitle))
+            {
+                return Result.Failure(TripErrors.InvalidActivity);
+            }
+
+            // Timed activities in time order; untimed ones keep their given order after them.
+            var ordered = activities.Where(x => x.TimeUtc is not null).OrderBy(x => x.TimeUtc)
+                .Concat(activities.Where(x => x.TimeUtc is null)).ToList();
+            built.Add(new ItineraryDay(day.Date, dayTitle, ordered));
+        }
+
+        _itinerary = built;
+        ItineraryUpdatedAtUtc = nowUtc;
         return Result.Success();
     }
 

@@ -16,7 +16,8 @@ public sealed record HomeRitualDto(
     RitualStepDto? NextStep);
 
 public sealed record HomeGroupDto(
-    Guid Id, string Name, string? LeaderName, int MemberCount, GroupMemberRole MyRole, int UnreadAnnouncements);
+    Guid Id, string Name, string? LeaderName, int MemberCount, GroupMemberRole MyRole, int UnreadAnnouncements,
+    Guid? TripId); // null for standalone groups; use it for GET /trips/{tripId}/itinerary
 
 // Every section is null when it does not apply (no journey yet, no published steps, not in a group).
 public sealed record HomeDto(HomeJourneyDto? Journey, HomeRitualDto? Ritual, HomeGroupDto? Group, int UnreadNotifications);

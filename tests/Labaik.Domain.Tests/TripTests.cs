@@ -56,4 +56,30 @@ public class TripTests
         Assert.Equal(TripStatus.Upcoming, trip.StatusOn(Departure.AddDays(-1)));
         Assert.Equal(TripStatus.Departed, trip.StatusOn(Departure));
     }
+
+    [Fact]
+    public void ReplaceItinerary_orders_days_and_timed_activities_and_validates()
+    {
+        var trip = Trip.Create(Guid.NewGuid(), Details(), Now).Value;
+        var at = new DateTimeOffset(2026, 12, 11, 5, 0, 0, TimeSpan.Zero);
+
+        var ok = trip.ReplaceItinerary(
+        [
+            new(Departure.AddDays(1), " Tawaf day ", [new("Sai", at.AddHours(3), null), new("Rest", null, "Hotel"), new("Tawaf", at, "Haram")]),
+            new(Departure, null, [new("Arrive", null, null)])
+        ], Now);
+
+        Assert.True(ok.IsSuccess);
+        Assert.Equal(Departure, trip.Itinerary[0].Date);
+        Assert.Equal("Tawaf day", trip.Itinerary[1].Title);
+        Assert.Equal(["Tawaf", "Sai", "Rest"], trip.Itinerary[1].Activities.Select(a => a.Title));
+
+        Assert.Equal("Trip.ItineraryDayOutsideTrip",
+            trip.ReplaceItinerary([new(Departure.AddDays(-1), null, [])], Now).Error!.Code);
+        Assert.Equal("Trip.DuplicateItineraryDay",
+            trip.ReplaceItinerary([new(Departure, null, []), new(Departure, null, [])], Now).Error!.Code);
+        Assert.Equal("Trip.InvalidActivity",
+            trip.ReplaceItinerary([new(Departure, null, [new(" ", null, null)])], Now).Error!.Code);
+        Assert.Equal(2, trip.Itinerary.Count); // failures changed nothing
+    }
 }

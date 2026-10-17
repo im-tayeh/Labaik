@@ -230,6 +230,56 @@ public class CompanyGroupTests(LabaikApiFactory factory)
     }
 
     [Fact]
+    public async Task Trip_program_is_shared_with_the_trip_and_editable_by_company_and_supervisor()
+    {
+        var (company, _) = await TestUsers.CreateCompanyAsync(factory);
+        var supervisor = await TestUsers.CreateAsync(factory);
+        var pilgrim = await TestUsers.CreateAsync(factory);
+        var outsider = await TestUsers.CreateAsync(factory);
+        var groupId = await CreateTripGroupAsync(company);
+        await company.Client.PutAsJsonAsync($"/api/v1/company/groups/{groupId}/supervisor", new { email = supervisor.Email });
+        await company.Client.PostAsJsonAsync($"/api/v1/company/groups/{groupId}/members", new { email = pilgrim.Email });
+
+        var tripId = (await pilgrim.Client.GetFromJsonAsync<JsonElement>("/api/v1/home"))
+            .GetProperty("group").GetProperty("tripId").GetGuid();
+        var url = $"/api/v1/trips/{tripId}/itinerary";
+
+        var empty = await pilgrim.Client.GetFromJsonAsync<JsonElement>(url);
+        Assert.Equal(0, empty.GetProperty("days").GetArrayLength());
+
+        var byCompany = await company.Client.PutAsJsonAsync(url, new
+        {
+            days = new[]
+            {
+                new { date = "2030-12-10", title = "Arrival", activities = new[] { new { title = "Check in", timeUtc = (string?)null, place = "Hotel" } } }
+            }
+        });
+        Assert.Equal(HttpStatusCode.OK, byCompany.StatusCode);
+
+        var bySupervisor = await supervisor.Client.PutAsJsonAsync(url, new
+        {
+            days = new[]
+            {
+                new { date = "2030-12-11", title = "Umrah", activities = new[] { new { title = "Tawaf", timeUtc = (string?)"2030-12-11T05:00:00Z", place = "Haram" } } },
+                new { date = "2030-12-10", title = "Arrival", activities = new[] { new { title = "Check in", timeUtc = (string?)null, place = "Hotel" } } }
+            }
+        });
+        Assert.Equal(HttpStatusCode.OK, bySupervisor.StatusCode);
+
+        var program = await pilgrim.Client.GetFromJsonAsync<JsonElement>(url);
+        var days = program.GetProperty("days").EnumerateArray().ToList();
+        Assert.Equal(["2030-12-10", "2030-12-11"], days.Select(d => d.GetProperty("date").GetString()));
+        Assert.Equal("Tawaf", days[1].GetProperty("activities")[0].GetProperty("title").GetString());
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await pilgrim.Client.PutAsJsonAsync(url, new { days = Array.Empty<object>() })).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await outsider.Client.GetAsync(url)).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await company.Client.PutAsJsonAsync(url, new
+        {
+            days = new[] { new { date = "2031-01-30", title = (string?)null, activities = Array.Empty<object>() } }
+        })).StatusCode); // outside the trip dates
+    }
+
+    [Fact]
     public async Task A_company_cannot_manage_another_companys_trip_or_group()
     {
         var (owner, _) = await TestUsers.CreateCompanyAsync(factory);

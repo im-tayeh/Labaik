@@ -489,6 +489,9 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                     b.Property<int>("ExpectedPilgrims")
                         .HasColumnType("integer");
 
+                    b.Property<DateTimeOffset?>("ItineraryUpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -934,6 +937,57 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                         .HasForeignKey("CompanyId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.OwnsMany("Labaik.Domain.Trips.ItineraryDay", "Itinerary", b1 =>
+                        {
+                            b1.Property<Guid>("TripId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<DateOnly>("Date");
+
+                            b1.Property<string>("Title");
+
+                            b1.HasKey("TripId", "__synthesizedOrdinal");
+
+                            b1.ToTable("Trips");
+
+                            b1
+                                .ToJson("Itinerary")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("TripId");
+
+                            b1.OwnsMany("Labaik.Domain.Trips.ItineraryActivity", "Activities", b2 =>
+                                {
+                                    b2.Property<Guid>("ItineraryDayTripId");
+
+                                    b2.Property<int>("ItineraryDay__synthesizedOrdinal");
+
+                                    b2.Property<int>("__synthesizedOrdinal")
+                                        .ValueGeneratedOnAdd();
+
+                                    b2.Property<string>("Place");
+
+                                    b2.Property<DateTimeOffset?>("TimeUtc");
+
+                                    b2.Property<string>("Title")
+                                        .IsRequired();
+
+                                    b2.HasKey("ItineraryDayTripId", "ItineraryDay__synthesizedOrdinal", "__synthesizedOrdinal");
+
+                                    b2.ToTable("Trips");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("ItineraryDayTripId", "ItineraryDay__synthesizedOrdinal");
+                                });
+
+                            b1.Navigation("Activities");
+                        });
+
+                    b.Navigation("Itinerary");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>

@@ -36,6 +36,27 @@ public static class TripErrors
     public static Error TooLong =>
         Error.Validation("Trip.TooLong", "A text field exceeds its maximum length.");
 
+    public const int MaxItineraryDays = 60;
+    public const int MaxActivitiesPerDay = 30;
+    public const int ActivityTextMaxLength = 200;
+
+    public static Error ItineraryTooLarge =>
+        Error.Validation("Trip.ItineraryTooLarge",
+            $"An itinerary has at most {MaxItineraryDays} days and {MaxActivitiesPerDay} activities per day.");
+
+    public static Error ItineraryDayOutsideTrip =>
+        Error.Validation("Trip.ItineraryDayOutsideTrip", "Every itinerary day must fall between the departure and return dates.");
+
+    public static Error DuplicateItineraryDay =>
+        Error.Validation("Trip.DuplicateItineraryDay", "Each date may appear only once in the itinerary.");
+
+    public static Error InvalidActivity =>
+        Error.Validation("Trip.InvalidActivity",
+            $"Each activity needs a title; title, place and day title are at most {ActivityTextMaxLength} characters.");
+
+    public static Error CannotEditItinerary =>
+        Error.Forbidden("Trip.CannotEditItinerary", "Only the company or a supervisor of this trip can edit its program.");
+
     public static Error NotFound =>
         Error.NotFound("Trip.NotFound", "The trip was not found.");
 }

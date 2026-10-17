@@ -19,6 +19,15 @@ internal sealed class TripConfiguration : IEntityTypeConfiguration<Trip>
         builder.Property<List<string>>("_destinations").HasColumnName("Destinations").IsRequired();
         builder.Ignore(t => t.Destinations);
 
+        // Itinerary: one jsonb document (days -> activities), always replaced whole; no child tables.
+        builder.OwnsMany(t => t.Itinerary, d =>
+        {
+            d.ToJson("Itinerary");
+            d.OwnsMany(x => x.Activities);
+            d.Navigation(x => x.Activities).UsePropertyAccessMode(PropertyAccessMode.Field);
+        });
+        builder.Navigation(t => t.Itinerary).UsePropertyAccessMode(PropertyAccessMode.Field);
+
         // Trips belong to a company (reference by id; no navigation across aggregates).
         builder.HasOne<Company>().WithMany().HasForeignKey(t => t.CompanyId).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(t => new { t.CompanyId, t.DepartureDate });

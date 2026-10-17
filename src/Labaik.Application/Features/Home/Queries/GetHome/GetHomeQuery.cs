@@ -95,6 +95,6 @@ public sealed class GetHomeQueryHandler(
             .Where(AnnouncementVisibility.VisibleInGroup(group.Id, group.CompanyId))
             .CountAsync(a => !a.Reads.Any(r => r.UserId == userId), cancellationToken);
 
-        return new HomeGroupDto(group.Id, group.Name, leaderName, group.MemberCount, myRole, unread);
+        return new HomeGroupDto(group.Id, group.Name, leaderName, group.MemberCount, myRole, unread, group.TripId);
     }
 }
