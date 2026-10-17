@@ -289,6 +289,7 @@ in T13 is the core of it. Build the rest of F after A if time is tight.
 **T14 — Company trips**
 - Domain: `Trip` aggregate owned by `Company`: `Name`, `PilgrimageType`, `Destinations`, `DepartureDate`, `ReturnDate?`, `DeparturePlace`, `ExpectedPilgrims`, `Notes?`; computed `TripStatus` (1 Upcoming / 2 Departed).
 - `POST /company/trips`, `GET /company/trips` (list), `GET /company/trips/{id}` (details), `PUT /company/trips/{id}`.
+- _Done:_ `Trip` aggregate (separate from `Journey`; `CompanyId` FK, `Destinations` as `text[]`, `DepartureDate`/`ReturnDate` as `DateOnly` "yyyy-MM-dd", atomic `Update`, `TripCreated` event); status computed via `StatusOn(todayUtc)` (Departed once today ≥ departure); shared `ITripFields` + `TripFieldsValidator<T>` for create/update; other companies' trips -> 404; migration `AddTrips`.
 
 **T15 — Company-managed groups**
 - Domain: `Group` gains `CompanyId` + `TripId`.

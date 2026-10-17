@@ -7,6 +7,7 @@ using Labaik.Domain.Guides;
 using Labaik.Domain.Journeys;
 using Labaik.Domain.Locations;
 using Labaik.Domain.Rituals;
+using Labaik.Domain.Trips;
 using Microsoft.EntityFrameworkCore;
 
 namespace Labaik.Application.Common.Interfaces;
@@ -23,6 +24,7 @@ public interface IAppDbContext
     DbSet<ChatMessage> ChatMessages { get; }
     DbSet<Notification> Notifications { get; }
     DbSet<Company> Companies { get; }
+    DbSet<Trip> Trips { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
