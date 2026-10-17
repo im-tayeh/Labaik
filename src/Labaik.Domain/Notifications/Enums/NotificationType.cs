@@ -1,4 +1,12 @@
 namespace Labaik.Domain.Notifications.Enums;
 
 // The client renders the (localized) text from the type; the backend stores no user-facing sentences.
-public enum NotificationType { AnnouncementPosted = 1, MemberJoinedGroup = 2 }
+// Values are part of the API contract: append new ones with the next number, never renumber.
+public enum NotificationType
+{
+    AnnouncementPosted = 1,     // -> group members (except the author)
+    MemberJoinedGroup = 2,      // -> group supervisor
+    GroupCreated = 3,           // -> company owner
+    SupervisorActivated = 4,    // -> company owner (a supervisor was assigned to a group)
+    GroupWithoutSupervisor = 5  // -> company owner (first pilgrim added to a group with no supervisor)
+}

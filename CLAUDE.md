@@ -304,6 +304,7 @@ in T13 is the core of it. Build the rest of F after A if time is tight.
 
 **T17 — Company notifications (new enum values)**
 - Add to `NotificationType` (next numbers, do not renumber): `3 GroupCreated`, `4 SupervisorActivated`, `5 GroupWithoutSupervisor`. Recipient: company account; broadcast via `/hubs/events` `NotificationReceived`.
+- _Done (no migration; enum stored as int):_ triggers — 3 on a company `GroupCreated` (preview = group name); 4 on `SupervisorAssigned` incl. replacement (preview = supervisor name, referenceId = supervisor id); 5 on the new `GroupAwaitingSupervisor` event = **first pilgrim added to a company group with no supervisor** (once; preview = group name). **Open:** if 5 should instead come from a scheduled check (e.g. trip departing soon, still unsupervised), that needs a background job.
 
 ---
 

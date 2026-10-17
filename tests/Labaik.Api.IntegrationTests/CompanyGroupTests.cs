@@ -126,6 +126,30 @@ public class CompanyGroupTests(LabaikApiFactory factory)
     }
 
     [Fact]
+    public async Task Company_owner_is_notified_of_group_created_waiting_pilgrims_and_supervisor()
+    {
+        var (company, _) = await TestUsers.CreateCompanyAsync(factory);
+        var supervisor = await TestUsers.CreateAsync(factory, name: "Khaled Supervisor");
+        var first = await TestUsers.CreateAsync(factory);
+        var second = await TestUsers.CreateAsync(factory);
+        var groupId = await CreateTripGroupAsync(company, "Group Waiting");
+
+        await company.Client.PostAsJsonAsync($"/api/v1/company/groups/{groupId}/members", new { email = first.Email });
+        await company.Client.PostAsJsonAsync($"/api/v1/company/groups/{groupId}/members", new { email = second.Email });
+        await company.Client.PutAsJsonAsync($"/api/v1/company/groups/{groupId}/supervisor", new { email = supervisor.Email });
+
+        var list = (await company.Client.GetFromJsonAsync<JsonElement>("/api/v1/notifications")).EnumerateArray().ToList();
+        JsonElement Single(int type) => Assert.Single(list, n => n.GetProperty("type").GetInt32() == type);
+
+        Assert.Equal("Group Waiting", Single(3).GetProperty("preview").GetString());          // GroupCreated
+        Assert.Equal("Group Waiting", Single(5).GetProperty("preview").GetString());          // GroupWithoutSupervisor, once
+        var activated = Single(4);                                                             // SupervisorActivated
+        Assert.Equal("Khaled Supervisor", activated.GetProperty("preview").GetString());
+        Assert.Equal(supervisor.Id, activated.GetProperty("referenceId").GetGuid());
+        Assert.All(list, n => Assert.Equal(groupId, n.GetProperty("groupId").GetGuid()));
+    }
+
+    [Fact]
     public async Task A_company_cannot_manage_another_companys_trip_or_group()
     {
         var (owner, _) = await TestUsers.CreateCompanyAsync(factory);

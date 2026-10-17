@@ -183,6 +183,13 @@ public sealed class Group : AggregateRoot
 
         _members.Add(new GroupMember(userId, GroupMemberRole.Member, joinedAtUtc));
         Raise(new MemberJoinedGroup(Id, userId));
+
+        // Pilgrims are now waiting in a company group with nobody responsible: tell the company once.
+        if (CompanyId is { } companyId && !HasSupervisor && PilgrimCount == 1)
+        {
+            Raise(new GroupAwaitingSupervisor(Id, companyId));
+        }
+
         return Result.Success();
     }
 }

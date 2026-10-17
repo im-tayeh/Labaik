@@ -1,5 +1,6 @@
 using Labaik.Domain.Groups;
 using Labaik.Domain.Groups.Enums;
+using Labaik.Domain.Groups.Events;
 
 namespace Labaik.Domain.Tests;
 
@@ -140,5 +141,31 @@ public class CompanyGroupDomainTests
         Assert.Equal("Group.CannotRemoveSupervisor", group.RemoveMember(supervisor).Error!.Code);
         Assert.True(group.RemoveMember(pilgrim).IsSuccess);
         Assert.Equal("Group.MemberNotFound", group.RemoveMember(pilgrim).Error!.Code);
+    }
+
+    [Fact]
+    public void First_pilgrim_in_an_unsupervised_company_group_raises_GroupAwaitingSupervisor_once()
+    {
+        var group = NewTripGroup();
+        group.ClearDomainEvents();
+
+        group.AddMember(Guid.NewGuid(), Now);
+        group.AddMember(Guid.NewGuid(), Now);
+
+        Assert.Single(group.DomainEvents.OfType<GroupAwaitingSupervisor>());
+    }
+
+    [Fact]
+    public void No_GroupAwaitingSupervisor_when_supervised_or_standalone()
+    {
+        var supervised = NewTripGroup();
+        supervised.AssignSupervisor(Guid.NewGuid(), Now);
+        supervised.AddMember(Guid.NewGuid(), Now);
+
+        var standalone = Group.Create("G", "CODE", Guid.NewGuid(), Now).Value;
+        standalone.AddMember(Guid.NewGuid(), Now);
+
+        Assert.Empty(supervised.DomainEvents.OfType<GroupAwaitingSupervisor>());
+        Assert.Empty(standalone.DomainEvents.OfType<GroupAwaitingSupervisor>());
     }
 }
