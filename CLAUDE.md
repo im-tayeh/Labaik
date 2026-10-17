@@ -231,6 +231,159 @@ Work the Backlog top-down without waiting for per-task orders:
   `dotnet test` into CI.
   - _Done:_ `tests/Labaik.Domain.Tests` (36 tests: Journey, Group, RitualProgress, LocationShare, content, announcements, notifications) and `tests/Labaik.Api.IntegrationTests` (21 tests over HTTP: auth, journeys, rituals, guides, home, groups/roles, announcements, notifications, chat, locations) on one shared `WebApplicationFactory` + `postgres:17` Testcontainer (`ICollectionFixture`; Serilog's bootstrap logger allows one host per process) with a capturing `IEmailSender` for OTPs; `dotnet test` step in CI; `EntityFrameworkCore.Relational` pinned to 10.0.12. New slices must add tests here._
 
+### Backlog v2 — Remaining scope (post Flutter sync, 17 Oct 2026)
+
+#### Surfaces (4 clients)
+
+1. **Pilgrim app** (mobile) — the معتمر experience.
+2. **Supervisor view** — same mobile app, role-gated by `Supervisor` in `user.roles`.
+3. **Company view** — the شركة experience (manages its trips/groups/members).
+4. **Admin Dashboard** — a **separate web client** for platform operators/developers. This is where **company accounts are created** and the platform is managed (backend = the `/admin/*` area).
+
+The mobile app **does keep an account-type selection screen** (`PUT /auth/account-type` stays). What it does NOT do is self-create company accounts — those come only from the admin dashboard.
+
+#### Architectural shift (read first)
+
+The app moved from a **pilgrim-self-service** model to an **admin → company → group** managed model:
+
+```
+Admin (dashboard) --creates--> Company --creates--> Trip --has--> Group(s) --assigns--> Supervisor
+                                                                    \--adds--> Members (Pilgrims)
+```
+
+Consequences for existing code:
+- `Group` becomes owned by `Company` (gains `CompanyId`, and a `TripId`).
+- `POST /groups` and `POST /groups/{code}/join` are no longer called by the app.
+  **Decision: keep them Admin-only** (do not delete yet).
+- A third role `Company` is added to `user.roles`.
+- `Trip` (company product) is distinct from `Journey` (pilgrim's personal onboarding). Do not merge.
+
+#### Build order
+
+| Phase | Why now | Tasks |
+| --- | --- | --- |
+| A — Company foundation | Fills the data every screen reads from | T13–T17 |
+| B — Supervisor operations | Closes the supervisor↔pilgrim loop | T18–T23 |
+| C — Pilgrim & shared | Completes pilgrim experience | T24–T25 |
+| D — Feature-complete | Sections with no endpoint at all | T26–T28 |
+| E — Journey reconciliation | Small shape mismatches | T29 |
+| F — Admin dashboard | Root of the chain; small (mostly admin endpoints) | T30–T31 |
+| Deferred | By project-owner decision | 1:1 chat, FCM push, religious-content review |
+
+Note on order: Phase F is the logical top of the chain (admin creates companies),
+but the backend work is small and can be built alongside Phase A — `POST /admin/companies`
+in T13 is the core of it. Build the rest of F after A if time is tight.
+
+---
+
+#### Phase A — Company foundation
+
+**T13 — `Company` role + aggregate**
+- Domain: `Company` aggregate (`Id`, `Name`, `CreatedAtUtc`); link user → company.
+- Identity: add `Company` role.
+- Auth: include `Company` in `user.roles` across login / verify-email / google / refresh-token and `GET /auth/me`.
+- `POST /admin/companies` (name + owner email) — Admin only.
+- `GET /company/me` -> `{ id, name }` (welcome header).
+
+**T14 — Company trips**
+- Domain: `Trip` aggregate owned by `Company`: `Name`, `PilgrimageType`, `Destinations`, `DepartureDate`, `ReturnDate?`, `DeparturePlace`, `ExpectedPilgrims`, `Notes?`; computed `TripStatus` (1 Upcoming / 2 Departed).
+- `POST /company/trips`, `GET /company/trips` (list), `GET /company/trips/{id}` (details), `PUT /company/trips/{id}`.
+
+**T15 — Company-managed groups**
+- Domain: `Group` gains `CompanyId` + `TripId`.
+- `POST /company/trips/{tripId}/groups`
+- `POST /company/groups/{groupId}/members`, `DELETE /company/groups/{groupId}/members/{userId}`
+- `PUT /company/groups/{groupId}/supervisor` (grants `Supervisor` role).
+
+**T16 — Company dashboard numbers**
+- `GET /company/home` -> `{ activeTrips, pilgrimsCount, supervisorsCount, groupsCount }`.
+
+**T17 — Company notifications (new enum values)**
+- Add to `NotificationType` (next numbers, do not renumber): `3 GroupCreated`, `4 SupervisorActivated`, `5 GroupWithoutSupervisor`. Recipient: company account; broadcast via `/hubs/events` `NotificationReceived`.
+
+---
+
+#### Phase B — Supervisor operations
+
+**T18 — Gathering point**
+- Domain: `GatheringPoint` VO on `Group` (`Address`, `Latitude`, `Longitude`, `GatheringTimeUtc?`).
+- `PUT /groups/{groupId}/gathering-point` (group leader only), `GET /groups/{groupId}/gathering-point` (members).
+- Fires new `NotificationType 6 GatheringPointChanged` to members.
+
+**T19 — Attendance / check-in**
+- Domain: `Attendance` per member (`Status` 1 Present / 2 Absent, `ConfirmedAtUtc?`).
+- `POST /groups/{groupId}/attendance/confirm` (pilgrim "I arrived"), `GET /groups/{groupId}/attendance` (supervisor list + counts), optional `PUT .../attendance/{userId}` (manual). Fires notification to supervisor on confirm.
+
+**T20 — Member profile fields**
+- Add: `MemberNumberInGroup`, `Gender`, `Nationality`, `HealthNotes`, `Notes`, `PhotoUrl`, `Email`.
+- `HealthNotes` is sensitive PII — restrict to supervisor/company, never in public DTOs.
+- `GET /groups/{groupId}/members/{userId}` (supervisor).
+
+**T21 — Announcement enrichment**
+- Add fields (never rename): `Importance` (1 Normal / 2 Important), `GatheringTimeUtc?`, `Location?`, `ImageUrl?`, `Audience` (1 Group / 2 AllCompanyPilgrims).
+- Then Flutter re-enables `unreadAnnouncements` and `POST /announcements/{id}/read`.
+
+**T22 — Multiple groups per supervisor**
+- `GET /supervisor/groups` -> list (name + counts); home supports selection.
+
+**T23 — Trip itinerary**
+- Domain: `ItineraryDay` + `ItineraryActivity` (`Title`, `TimeUtc?`, `Place?`) on `Trip`/`Group`.
+- `GET /trips/{id}/itinerary`, `PUT` (company/supervisor). Fills "trip program" + "upcoming trip" card.
+
+---
+
+#### Phase C — Pilgrim & shared
+
+**T24 — Chat enhancements**
+- `unreadCount` + read state for group chat; location messages (`Latitude`/`Longitude` + message type) in `ChatMessageDto`; `SenderPhotoUrl`.
+
+**T25 — Missing pilgrim notification types**
+- Optional `NotificationType 7 GroupMessagePosted`. Cover the 4 types in the pilgrim notifications screen (announcement / supervisor message [deferred, needs 1:1] / gathering-point change [T18] / group message).
+
+---
+
+#### Phase D — No-endpoint sections
+
+**T26 — Field mode (map)**
+- `GET /map/destinations?type=` (Haram gates + images, seed data), `GET /map/route`, `POST /map/emergency`, unify `POST /map/location` with `/location`.
+
+**T27 — Help center**
+- `GET /pilgrim/supervisor` (supervisor contact for pilgrim), `POST /lost-child-reports`.
+
+**T28 — Family circle**
+- Full section (invite/accept + location sharing within the circle), independent of the company group.
+
+---
+
+#### Phase E — Journey reconciliation
+
+**T29**
+- Departure time: app sends one date; server wants `arrivalAtUtc` per stay. Current owner decision: same date for all stays. (Alt: make `arrivalAtUtc` optional, or add trip-level `departureAtUtc`.)
+- `pilgrimageType` in `PUT`: **Decision: allow editing it.**
+- Frontend-only fields with no server home: route city order, traveler name, "not decided yet" — keep in Flutter.
+
+---
+
+#### Admin dashboard endpoints (backend for the dev/ops web panel)
+
+**T30 — Admin area (`/admin/*`, Admin role only)**
+- `POST /admin/companies` (name + owner email) — create a company account (already in T13).
+- `GET /admin/companies` (list), `GET /admin/companies/{id}` (details + its trips/groups/supervisors counts).
+- `PUT /admin/companies/{id}` (edit), optional `POST /admin/companies/{id}/deactivate`.
+- `GET /admin/overview` — platform-wide numbers (companies, trips, pilgrims, supervisors) for the dashboard home.
+- Reuse the existing `GET/PUT/DELETE /admin/users/{id}/supervisor` endpoints.
+- The dashboard itself is a separate web frontend; the backend only exposes this area.
+
+---
+
+#### Decisions locked in (flip if you disagree)
+
+1. "Account type" screen + `PUT /auth/account-type`: **kept**. Company accounts are created only from the admin dashboard, never self-registered.
+2. `POST /groups` + join: **kept Admin-only**, not deleted.
+3. Multiple groups per supervisor: **yes** (T22).
+4. `pilgrimageType` editable in `PUT`: **yes**.
+5. 1:1 chat + FCM push: **deferred**.
+
 ---
 
 ## 10. DevOps & Deployment
@@ -296,3 +449,53 @@ Work the Backlog top-down without waiting for per-task orders:
 A Brevo API key was shared earlier in a chat (now exposed). Before relying on it in
 production, **regenerate it in Brevo**, store it only in user-secrets / Render env
 vars, and never commit it.
+
+---
+
+## 13. Figma Designs → API (Figma MCP rules)
+
+This repo has **no UI layer**: no design tokens, components, styles, icons, images or
+front-end build. Those live in the Flutter repo. Never add UI code or design assets
+here. In this repo a Figma screen is an **input to the API contract**, not something to
+implement visually.
+
+### What maps where
+
+| Figma artifact | Backend counterpart | Location |
+| --- | --- | --- |
+| A screen / flow | One or more endpoints in a vertical slice | `src/Labaik.Api/Endpoints/<Area>Endpoints.cs` + `src/Labaik.Application/Features/<Area>/` |
+| Fields shown on a screen | Response DTO properties (camelCase in JSON) | `Features/<Area>/Dtos/*.cs` |
+| A form | Command/Query + FluentValidation rules | `Features/<Area>/Commands/<Name>/` |
+| A dropdown / segmented choice | C# enum, sent as an **integer** | `src/Labaik.Domain/<Area>/Enums/*.cs` |
+| Static Arabic copy (guides, ritual steps) | JSON seed data, never C# | `src/Labaik.Infrastructure/Persistence/Seed/*.json` |
+| Labels, buttons, error and notification wording | **Flutter** localization: the API sends codes/types, not sentences | n/a here |
+| Images, icons, colors, spacing, fonts | **Flutter** assets/theme | n/a here |
+
+### Workflow when given a Figma link
+
+1. Read the frame with `get_metadata` / `get_screenshot` (use `get_design_context` only
+   when the structure is needed; follow the `/figma-design-to-code` skill if it applies).
+   Treat the design as a requirements source, not as code to generate.
+2. List every data field, action and state the screen needs. Loading and offline
+   states are Flutter's concern; empty **data** states are ours (e.g. `null` sections
+   in `HomeDto`).
+3. Check the existing contract first (`/openapi/v1.json` locally, the DTOs, §9 notes).
+   Prefer extending an existing DTO with **additive** fields over a new endpoint.
+4. Implement any gap as a normal vertical slice (§8), with tests (§9 T11).
+5. Report field → DTO mapping and anything the design implies that the domain does not
+   support yet (e.g. a field with no data source) as an open question, not a guess.
+
+### Rules
+
+- **No Arabic in C#** (§5). Arabic text seen in a design either becomes seed JSON
+  (content) or stays in Flutter (UI copy).
+- **Stable contract** (§1, §8.9): renaming or removing a field to match a design is a
+  breaking change. Add the new field, keep the old one, and flag it for Flutter in the
+  commit body.
+- **Server owns rules, client owns presentation.** Visibility of a control (e.g.
+  "create group") comes from data the API returns (`user.roles`,
+  `home.group.myRole`). The API never returns layout, colors or display strings.
+- **Enum options in a design must match the enum.** A new option = a new enum value
+  appended with the next integer, never a renumbering.
+- **Dates** are UTC ISO 8601 in the API. Formatting (Hijri/Gregorian, Arabic numerals)
+  is Flutter's job.
