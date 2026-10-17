@@ -50,7 +50,7 @@ public sealed class MemberJoinedGroupHandler(
 
         var leaderId = await context.Groups
             .Where(g => g.Id == e.GroupId)
-            .Select(g => (Guid?)g.LeaderId)
+            .Select(g => g.LeaderId)
             .FirstOrDefaultAsync(cancellationToken);
         if (leaderId is null || leaderId == e.UserId)
         {

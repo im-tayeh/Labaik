@@ -296,6 +296,7 @@ in T13 is the core of it. Build the rest of F after A if time is tight.
 - `POST /company/trips/{tripId}/groups`
 - `POST /company/groups/{groupId}/members`, `DELETE /company/groups/{groupId}/members/{userId}`
 - `PUT /company/groups/{groupId}/supervisor` (grants `Supervisor` role).
+- _Done:_ `Group` gains nullable `CompanyId`/`TripId` (FKs) and `LeaderId` is now **nullable** (company groups start with no supervisor); `Group.CreateForTrip`, `AssignSupervisor` (replaces + removes the previous supervisor, promotes an existing member, idempotent, `SupervisorAssigned` event), `AddMember`, `RemoveMember` (supervisor can't be removed -> 409); members/supervisor are added **by email of an existing account**; extra `GET /company/trips/{tripId}/groups` (company needs to list group ids); `POST /groups` and `POST /groups/{code}/join` are now **Admin-only** (locked decision 2); `GenerateUniqueJoinCodeAsync` shared; migration `AddCompanyManagedGroups`.
 
 **T16 — Company dashboard numbers**
 - `GET /company/home` -> `{ activeTrips, pilgrimsCount, supervisorsCount, groupsCount }`.

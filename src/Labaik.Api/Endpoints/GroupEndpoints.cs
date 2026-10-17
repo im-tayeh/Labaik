@@ -31,8 +31,8 @@ public static class GroupEndpoints
             var result = await sender.Send(command, ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         })
-        .RequireAuthorization(AuthorizationPolicies.Supervisor)
-        .WithSummary("Create a group (supervisors only; creator becomes the leader)");
+        .RequireAuthorization(AuthorizationPolicies.Admin)
+        .WithSummary("Create a standalone group (admin only; companies use /company/trips/{tripId}/groups)");
 
         group.MapGet("/{code}", async (string code, ISender sender, CancellationToken ct) =>
         {
@@ -44,7 +44,9 @@ public static class GroupEndpoints
         {
             var result = await sender.Send(new JoinGroupCommand(code), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
-        }).WithSummary("Join a group by its code");
+        })
+        .RequireAuthorization(AuthorizationPolicies.Admin)
+        .WithSummary("Join a group by its code (admin only; companies add members via /company/groups/{groupId}/members)");
 
         group.MapPost("/{groupId:guid}/announcements", async (Guid groupId, PostAnnouncementRequest body, ISender sender, CancellationToken ct) =>
         {

@@ -8,42 +8,48 @@ namespace Labaik.Api.IntegrationTests;
 [Collection(ApiCollection.Name)]
 public class GroupTests(LabaikApiFactory factory)
 {
-    private sealed record GroupSetup(TestUser Leader, TestUser Member, TestUser Outsider, Guid GroupId, string JoinCode);
+    private sealed record GroupSetup(TestUser Company, TestUser Leader, TestUser Member, TestUser Outsider, Guid GroupId);
 
+    // The managed flow: company -> trip -> group -> supervisor (leader) -> member.
     private async Task<GroupSetup> SetupAsync()
     {
-        var leader = await TestUsers.CreateSupervisorAsync(factory, "Leader");
+        var (company, _) = await TestUsers.CreateCompanyAsync(factory);
+        var leader = await TestUsers.CreateAsync(factory, name: "Leader");
         var member = await TestUsers.CreateAsync(factory, name: "Member");
         var outsider = await TestUsers.CreateAsync(factory, name: "Outsider");
 
-        var created = await leader.Client.PostAsJsonAsync("/api/v1/groups/", new { name = "Caravan" });
-        Assert.Equal(HttpStatusCode.OK, created.StatusCode);
-        var group = await created.Content.ReadFromJsonAsync<JsonElement>();
+        var groupId = await CompanyGroupTests.CreateTripGroupAsync(company);
+        Assert.Equal(HttpStatusCode.OK, (await company.Client.PutAsJsonAsync(
+            $"/api/v1/company/groups/{groupId}/supervisor", new { email = leader.Email })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await company.Client.PostAsJsonAsync(
+            $"/api/v1/company/groups/{groupId}/members", new { email = member.Email })).StatusCode);
 
-        var joinCode = group.GetProperty("joinCode").GetString()!;
-        var join = await member.Client.PostAsync($"/api/v1/groups/{joinCode}/join", null);
-        Assert.Equal(HttpStatusCode.OK, join.StatusCode);
-
-        return new GroupSetup(leader, member, outsider, group.GetProperty("id").GetGuid(), joinCode);
+        return new GroupSetup(company, leader, member, outsider, groupId);
     }
 
     [Fact]
-    public async Task Pilgrims_cannot_create_groups()
+    public async Task Pilgrims_and_supervisors_cannot_create_or_join_standalone_groups()
     {
         var pilgrim = await TestUsers.CreateAsync(factory);
+        var supervisor = await TestUsers.CreateSupervisorAsync(factory);
+        var admin = await TestUsers.GetAdminAsync(factory);
 
-        var response = await pilgrim.Client.PostAsJsonAsync("/api/v1/groups/", new { name = "Mine" });
+        Assert.Equal(HttpStatusCode.Forbidden, (await pilgrim.Client.PostAsJsonAsync("/api/v1/groups/", new { name = "Mine" })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await supervisor.Client.PostAsJsonAsync("/api/v1/groups/", new { name = "Mine" })).StatusCode);
 
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        var created = await admin.Client.PostAsJsonAsync("/api/v1/groups/", new { name = "Admin group" });
+        Assert.Equal(HttpStatusCode.OK, created.StatusCode);
+        var code = (await created.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("joinCode").GetString();
+        Assert.Equal(HttpStatusCode.Forbidden, (await pilgrim.Client.PostAsync($"/api/v1/groups/{code}/join", null)).StatusCode);
     }
 
     [Fact]
-    public async Task Joining_twice_conflicts_and_member_count_is_reported()
+    public async Task Adding_a_member_twice_conflicts_and_member_count_is_reported()
     {
         var s = await SetupAsync();
 
-        var rejoin = await s.Member.Client.PostAsync($"/api/v1/groups/{s.JoinCode}/join", null);
-        Assert.Equal(HttpStatusCode.Conflict, rejoin.StatusCode);
+        var again = await s.Company.Client.PostAsJsonAsync($"/api/v1/company/groups/{s.GroupId}/members", new { email = s.Member.Email });
+        Assert.Equal(HttpStatusCode.Conflict, again.StatusCode);
 
         var home = await s.Member.Client.GetFromJsonAsync<JsonElement>("/api/v1/home");
         Assert.Equal(2, home.GetProperty("group").GetProperty("memberCount").GetInt32());

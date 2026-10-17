@@ -1,4 +1,6 @@
-﻿using Labaik.Domain.Groups;
+﻿using Labaik.Domain.Companies;
+using Labaik.Domain.Groups;
+using Labaik.Domain.Trips;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -13,6 +15,10 @@ internal sealed class GroupConfiguration : IEntityTypeConfiguration<Group>
         builder.Property(g => g.Name).HasMaxLength(100).IsRequired();
         builder.Property(g => g.JoinCode).HasMaxLength(20).IsRequired();
         builder.HasIndex(g => g.JoinCode).IsUnique(); // enforce uniqueness at the DB level
+
+        // Company-managed groups reference their company and trip by id (nullable for legacy groups).
+        builder.HasOne<Company>().WithMany().HasForeignKey(g => g.CompanyId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Trip>().WithMany().HasForeignKey(g => g.TripId).OnDelete(DeleteBehavior.Restrict);
 
         builder.OwnsMany(g => g.Members, m =>
         {

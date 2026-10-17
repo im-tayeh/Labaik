@@ -1,9 +1,9 @@
 ﻿using Labaik.Application.Common.Interfaces;
+using Labaik.Application.Features.Groups.Common;
 using Labaik.Application.Features.Groups.Dtos;
 using Labaik.Domain.Common.Results;
 using Labaik.Domain.Groups;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace Labaik.Application.Features.Groups.Commands.CreateGroup;
 
@@ -20,15 +20,7 @@ public sealed class CreateGroupCommandHandler(
             return Error.Unauthorized("Auth.Required", "Authentication is required.");
         }
 
-        // Generate a unique join code (retry on the rare collision).
-        string code;
-        var attempts = 0;
-        do
-        {
-            code = codeGenerator.Generate();
-            attempts++;
-        }
-        while (await context.Groups.AnyAsync(g => g.JoinCode == code, cancellationToken) && attempts < 5);
+        var code = await context.GenerateUniqueJoinCodeAsync(codeGenerator, cancellationToken);
 
         var result = Group.Create(request.Name, code, userId, timeProvider.GetUtcNow());
         if (result.IsFailure)

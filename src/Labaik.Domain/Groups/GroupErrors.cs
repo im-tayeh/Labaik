@@ -4,6 +4,20 @@ namespace Labaik.Domain.Groups;
 
 public static class GroupErrors
 {
+    public const int NameMaxLength = 100;
+
+    public static Error NameTooLong =>
+        Error.Validation("Group.NameTooLong", $"Group name must be at most {NameMaxLength} characters.");
+
+    public static Error TripRequired =>
+        Error.Validation("Group.TripRequired", "A company group must belong to a company trip.");
+
+    public static Error MemberNotFound =>
+        Error.NotFound("Group.MemberNotFound", "The user is not a member of this group.");
+
+    public static Error CannotRemoveSupervisor =>
+        Error.Conflict("Group.CannotRemoveSupervisor", "The supervisor cannot be removed as a member; assign another supervisor instead.");
+
     public static Error NameRequired =>
         Error.Validation("Group.NameRequired", "Group name is required.");
 

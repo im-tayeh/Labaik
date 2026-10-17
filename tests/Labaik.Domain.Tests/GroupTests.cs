@@ -67,3 +67,78 @@ public class GroupTests
         Assert.True(group.PostMessage(LeaderId, "hi", Now).IsSuccess);
     }
 }
+
+public class CompanyGroupDomainTests
+{
+    private static readonly DateTimeOffset Now = new(2026, 11, 1, 10, 0, 0, TimeSpan.Zero);
+
+    private static Group NewTripGroup() =>
+        Group.CreateForTrip("Group A", "CODE01", Guid.NewGuid(), Guid.NewGuid(), Now).Value;
+
+    [Fact]
+    public void CreateForTrip_starts_without_supervisor_or_members()
+    {
+        var group = NewTripGroup();
+
+        Assert.False(group.HasSupervisor);
+        Assert.Empty(group.Members);
+        Assert.NotNull(group.TripId);
+        Assert.Equal("Group.TripRequired",
+            Group.CreateForTrip("G", "C", Guid.NewGuid(), Guid.Empty, Now).Error!.Code);
+    }
+
+    [Fact]
+    public void No_one_can_announce_before_a_supervisor_is_assigned()
+    {
+        var group = NewTripGroup();
+
+        Assert.Equal("Group.NotLeader", group.PostAnnouncement(Guid.NewGuid(), "T", "B", Now).Error!.Code);
+    }
+
+    [Fact]
+    public void AssignSupervisor_promotes_a_member_and_replaces_the_previous_supervisor()
+    {
+        var group = NewTripGroup();
+        var first = Guid.NewGuid();
+        var pilgrim = Guid.NewGuid();
+        group.AddMember(pilgrim, Now);
+
+        Assert.True(group.AssignSupervisor(first, Now).IsSuccess);
+        Assert.Equal(first, group.LeaderId);
+        Assert.Equal(1, group.PilgrimCount);
+
+        Assert.True(group.AssignSupervisor(pilgrim, Now).IsSuccess); // promote the existing member
+
+        Assert.Equal(pilgrim, group.LeaderId);
+        Assert.False(group.IsMember(first)); // previous supervisor left
+        Assert.Equal(GroupMemberRole.Leader, Assert.Single(group.Members).Role);
+        Assert.Equal(0, group.PilgrimCount);
+    }
+
+    [Fact]
+    public void AssignSupervisor_again_is_idempotent()
+    {
+        var group = NewTripGroup();
+        var supervisor = Guid.NewGuid();
+        group.AssignSupervisor(supervisor, Now);
+        group.ClearDomainEvents();
+
+        Assert.True(group.AssignSupervisor(supervisor, Now).IsSuccess);
+        Assert.Empty(group.DomainEvents);
+        Assert.Single(group.Members);
+    }
+
+    [Fact]
+    public void RemoveMember_rules()
+    {
+        var group = NewTripGroup();
+        var supervisor = Guid.NewGuid();
+        var pilgrim = Guid.NewGuid();
+        group.AssignSupervisor(supervisor, Now);
+        group.AddMember(pilgrim, Now);
+
+        Assert.Equal("Group.CannotRemoveSupervisor", group.RemoveMember(supervisor).Error!.Code);
+        Assert.True(group.RemoveMember(pilgrim).IsSuccess);
+        Assert.Equal("Group.MemberNotFound", group.RemoveMember(pilgrim).Error!.Code);
+    }
+}

@@ -113,12 +113,15 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("CompanyId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("JoinCode")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
-                    b.Property<Guid>("LeaderId")
+                    b.Property<Guid?>("LeaderId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Name")
@@ -126,10 +129,17 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<Guid?>("TripId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
 
                     b.HasIndex("JoinCode")
                         .IsUnique();
+
+                    b.HasIndex("TripId");
 
                     b.ToTable("Groups", (string)null);
                 });
@@ -677,6 +687,16 @@ namespace Labaik.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Labaik.Domain.Groups.Group", b =>
                 {
+                    b.HasOne("Labaik.Domain.Companies.Company", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Labaik.Domain.Trips.Trip", null)
+                        .WithMany()
+                        .HasForeignKey("TripId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.OwnsMany("Labaik.Domain.Groups.GroupMember", "Members", b1 =>
                         {
                             b1.Property<Guid>("Id")

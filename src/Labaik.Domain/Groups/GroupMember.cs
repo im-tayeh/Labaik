@@ -17,4 +17,6 @@ public sealed class GroupMember : Entity
         Role = role;
         JoinedAtUtc = joinedAtUtc;
     }
+
+    internal void PromoteToLeader() => Role = GroupMemberRole.Leader;
 }

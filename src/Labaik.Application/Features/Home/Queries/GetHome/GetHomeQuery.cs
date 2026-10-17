@@ -79,7 +79,9 @@ public sealed class GetHomeQueryHandler(
         }
 
         var myRole = group.Members.First(m => m.UserId == userId).Role;
-        var leaderName = await userDirectory.GetFullNameAsync(group.LeaderId, cancellationToken);
+        var leaderName = group.LeaderId is { } leaderId
+            ? await userDirectory.GetFullNameAsync(leaderId, cancellationToken)
+            : null;
 
         var unread = await context.Announcements
             .CountAsync(a => a.GroupId == group.Id && !a.Reads.Any(r => r.UserId == userId), cancellationToken);

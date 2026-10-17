@@ -47,7 +47,9 @@ public sealed class JoinGroupCommandHandler(
 
         await context.SaveChangesAsync(cancellationToken);
 
-        var leaderName = await userDirectory.GetFullNameAsync(group.LeaderId, cancellationToken);
+        var leaderName = group.LeaderId is { } leaderId
+            ? await userDirectory.GetFullNameAsync(leaderId, cancellationToken)
+            : null;
         return new GroupSummaryDto(group.Id, group.Name, leaderName, group.MemberCount);
     }
 }

@@ -26,7 +26,9 @@ public sealed class GetGroupByCodeQueryHandler(
             return Error.NotFound("Group.NotFound", "No group found for this code.");
         }
 
-        var leaderName = await userDirectory.GetFullNameAsync(group.LeaderId, cancellationToken);
+        var leaderName = group.LeaderId is { } leaderId
+            ? await userDirectory.GetFullNameAsync(leaderId, cancellationToken)
+            : null;
         return new GroupSummaryDto(group.Id, group.Name, leaderName, group.MemberCount);
     }
 }
