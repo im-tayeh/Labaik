@@ -1,5 +1,6 @@
 ﻿using Labaik.Domain.Announcements;
 using Labaik.Domain.Chat;
+using Labaik.Domain.Companies;
 using Labaik.Domain.Notifications;
 using Labaik.Domain.Groups;
 using Labaik.Domain.Guides;
@@ -21,6 +22,7 @@ public interface IAppDbContext
     DbSet<LocationShare> LocationShares { get; }
     DbSet<ChatMessage> ChatMessages { get; }
     DbSet<Notification> Notifications { get; }
+    DbSet<Company> Companies { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

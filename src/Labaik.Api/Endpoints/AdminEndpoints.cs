@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Asp.Versioning.Builder;
 using Labaik.Api.Extensions;
+using Labaik.Application.Features.Admin.Commands.CreateCompany;
 using Labaik.Application.Features.Admin.Commands.SetSupervisorRole;
 using Labaik.Application.Features.Admin.Queries.FindUserByEmail;
 using MediatR;
@@ -36,6 +37,14 @@ public static class AdminEndpoints
             var result = await sender.Send(new SetSupervisorRoleCommand(userId, IsSupervisor: false), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         }).WithSummary("Revoke the Supervisor role (admin; applies from the user's next token)");
+
+        group.MapPost("/companies", async (CreateCompanyCommand command, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(command, ct);
+            return result.IsSuccess
+                ? Results.Created($"/api/v1/admin/companies/{result.Value.Id}", result.Value)
+                : result.Error!.ToProblem();
+        }).WithSummary("Create a company for an existing account and grant it the Company role (admin)");
 
         return app;
     }

@@ -5,6 +5,7 @@ public static class Roles
 {
     public const string Admin = "Admin";
     public const string Supervisor = "Supervisor";
+    public const string Company = "Company"; // owner account of a company (created by an admin)
 
-    public static readonly IReadOnlyList<string> All = [Admin, Supervisor];
+    public static readonly IReadOnlyList<string> All = [Admin, Supervisor, Company];
 }

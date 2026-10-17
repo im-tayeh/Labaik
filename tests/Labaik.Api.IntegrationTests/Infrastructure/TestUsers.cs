@@ -61,7 +61,21 @@ public static class TestUsers
         return await RefreshAsync(factory, user);
     }
 
-    private static async Task<TestUser> GetAdminAsync(LabaikApiFactory factory)
+    // A signed-in company owner: an admin creates the company for a registered account,
+    // effective after a token refresh.
+    public static async Task<(TestUser Owner, Guid CompanyId)> CreateCompanyAsync(LabaikApiFactory factory, string companyName = "Test Company")
+    {
+        var admin = await GetAdminAsync(factory);
+        var owner = await CreateAsync(factory, name: "Company Owner");
+
+        var create = await admin.Client.PostAsJsonAsync("/api/v1/admin/companies", new { name = companyName, ownerEmail = owner.Email });
+        Assert.Equal(HttpStatusCode.Created, create.StatusCode);
+        var companyId = (await create.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+
+        return (await RefreshAsync(factory, owner), companyId);
+    }
+
+    public static async Task<TestUser> GetAdminAsync(LabaikApiFactory factory)
     {
         var login = await factory.CreateClient().PostAsJsonAsync("/api/v1/auth/login",
             new { email = LabaikApiFactory.AdminEmail, password = Password });

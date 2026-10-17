@@ -1,6 +1,7 @@
 ﻿using Labaik.Application.Common.Interfaces;
 using Labaik.Domain.Announcements;
 using Labaik.Domain.Chat;
+using Labaik.Domain.Companies;
 using Labaik.Domain.Notifications;
 using Labaik.Domain.Groups;
 using Labaik.Domain.Guides;
@@ -30,6 +31,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<LocationShare> LocationShares => Set<LocationShare>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<Company> Companies => Set<Company>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

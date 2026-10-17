@@ -284,6 +284,7 @@ in T13 is the core of it. Build the rest of F after A if time is tight.
 - Auth: include `Company` in `user.roles` across login / verify-email / google / refresh-token and `GET /auth/me`.
 - `POST /admin/companies` (name + owner email) — Admin only.
 - `GET /company/me` -> `{ id, name }` (welcome header).
+- _Done:_ `Company` aggregate (`Name`, `OwnerUserId` unique, `CreatedAtUtc`, `CompanyCreated` event); role `Company` + policy `Company`; `POST /admin/companies` links an **existing** account by email (404 if not registered, 409 if it already owns one) and grants the role (effective after refresh); `GET /company/me`; `CompanyDataAccess.GetMyCompanyIdAsync` resolves "my company" for all company endpoints; migration `AddCompanies`.
 
 **T14 — Company trips**
 - Domain: `Trip` aggregate owned by `Company`: `Name`, `PilgrimageType`, `Destinations`, `DepartureDate`, `ReturnDate?`, `DeparturePlace`, `ExpectedPilgrims`, `Notes?`; computed `TripStatus` (1 Upcoming / 2 Departed).
