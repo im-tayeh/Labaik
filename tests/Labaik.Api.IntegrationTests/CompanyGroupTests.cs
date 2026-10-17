@@ -93,6 +93,39 @@ public class CompanyGroupTests(LabaikApiFactory factory)
     }
 
     [Fact]
+    public async Task Company_home_counts_active_trips_and_distinct_people()
+    {
+        var (company, _) = await TestUsers.CreateCompanyAsync(factory);
+        var supervisor = await TestUsers.CreateAsync(factory);
+        var inBoth = await TestUsers.CreateAsync(factory);
+        var inOne = await TestUsers.CreateAsync(factory);
+
+        // A finished trip (not active) with no groups.
+        var past = await company.Client.PostAsJsonAsync("/api/v1/company/trips", new
+        {
+            name = "Past", pilgrimageType = 1, destinations = new[] { "Makkah" }, departureDate = "2020-01-01",
+            returnDate = "2020-01-10", departurePlace = "Amman", expectedPilgrims = 10
+        });
+        Assert.Equal(HttpStatusCode.Created, past.StatusCode);
+
+        var groupA = await CreateTripGroupAsync(company, "A");
+        var groupB = await CreateTripGroupAsync(company, "B");
+        foreach (var g in new[] { groupA, groupB })
+        {
+            await company.Client.PutAsJsonAsync($"/api/v1/company/groups/{g}/supervisor", new { email = supervisor.Email });
+            await company.Client.PostAsJsonAsync($"/api/v1/company/groups/{g}/members", new { email = inBoth.Email });
+        }
+        await company.Client.PostAsJsonAsync($"/api/v1/company/groups/{groupA}/members", new { email = inOne.Email });
+
+        var home = await company.Client.GetFromJsonAsync<JsonElement>("/api/v1/company/home");
+
+        Assert.Equal(2, home.GetProperty("activeTrips").GetInt32());   // 2 upcoming, the past one excluded
+        Assert.Equal(2, home.GetProperty("groupsCount").GetInt32());
+        Assert.Equal(1, home.GetProperty("supervisorsCount").GetInt32()); // same supervisor on both groups
+        Assert.Equal(2, home.GetProperty("pilgrimsCount").GetInt32());    // inBoth counted once
+    }
+
+    [Fact]
     public async Task A_company_cannot_manage_another_companys_trip_or_group()
     {
         var (owner, _) = await TestUsers.CreateCompanyAsync(factory);

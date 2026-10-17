@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Asp.Versioning.Builder;
 using Labaik.Api.Extensions;
+using Labaik.Application.Features.Companies.Queries.GetCompanyHome;
 using Labaik.Application.Features.Companies.Queries.GetMyCompany;
 using Labaik.Application.Features.Groups.Commands.AddGroupMember;
 using Labaik.Application.Features.Groups.Commands.AssignGroupSupervisor;
@@ -33,6 +34,12 @@ public static class CompanyEndpoints
             var result = await sender.Send(new GetMyCompanyQuery(), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         }).WithSummary("The current account's company (welcome header)");
+
+        group.MapGet("/home", async (ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new GetCompanyHomeQuery(), ct);
+            return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
+        }).WithSummary("Company dashboard numbers: active trips, pilgrims, supervisors, groups");
 
         group.MapPost("/trips", async (CreateTripCommand command, ISender sender, CancellationToken ct) =>
         {

@@ -300,6 +300,7 @@ in T13 is the core of it. Build the rest of F after A if time is tight.
 
 **T16 — Company dashboard numbers**
 - `GET /company/home` -> `{ activeTrips, pilgrimsCount, supervisorsCount, groupsCount }`.
+- _Done:_ read-only `GetCompanyHomeQuery` (no migration). Definitions: `activeTrips` = trips with no return date or returning today or later (UTC); `pilgrimsCount`/`supervisorsCount` = **distinct** people across all the company's groups; `groupsCount` = all its groups.
 
 **T17 — Company notifications (new enum values)**
 - Add to `NotificationType` (next numbers, do not renumber): `3 GroupCreated`, `4 SupervisorActivated`, `5 GroupWithoutSupervisor`. Recipient: company account; broadcast via `/hubs/events` `NotificationReceived`.
