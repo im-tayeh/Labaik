@@ -144,4 +144,35 @@ public class GroupTests(LabaikApiFactory factory)
 
         Assert.Equal(HttpStatusCode.NotFound, (await s.Outsider.Client.GetAsync($"/api/v1/groups/{s.GroupId}/locations")).StatusCode);
     }
+
+    [Fact]
+    public async Task Supervisor_sets_the_gathering_point_and_members_are_notified()
+    {
+        var s = await SetupAsync();
+        var url = $"/api/v1/groups/{s.GroupId}/gathering-point";
+
+        Assert.Equal(HttpStatusCode.NoContent, (await s.Member.Client.GetAsync(url)).StatusCode); // not set yet
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await s.Member.Client.PutAsJsonAsync(url, new { address = "x", latitude = 21.4, longitude = 39.8 })).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await s.Outsider.Client.GetAsync(url)).StatusCode);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity,
+            (await s.Leader.Client.PutAsJsonAsync(url, new { address = "", latitude = 95, longitude = 39.8 })).StatusCode);
+
+        Assert.Equal(HttpStatusCode.OK, (await s.Leader.Client.PutAsJsonAsync(url,
+            new { address = "King Abdulaziz Gate", latitude = 21.4225, longitude = 39.8262, gatheringTimeUtc = "2030-12-11T05:00:00Z" })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await s.Leader.Client.PutAsJsonAsync(url,
+            new { address = "Gate 79", latitude = 21.4230, longitude = 39.8270 })).StatusCode); // move it
+
+        var point = await s.Member.Client.GetFromJsonAsync<JsonElement>(url);
+        Assert.Equal("Gate 79", point.GetProperty("address").GetString());
+        Assert.Equal(JsonValueKind.Null, point.GetProperty("gatheringTimeUtc").ValueKind);
+
+        var memberTypes = (await s.Member.Client.GetFromJsonAsync<JsonElement>("/api/v1/notifications"))
+            .EnumerateArray().Where(n => n.GetProperty("type").GetInt32() == 6).ToList();
+        Assert.Equal(2, memberTypes.Count);
+        Assert.Equal("Gate 79", memberTypes[0].GetProperty("preview").GetString()); // newest first
+        var leaderTypes = (await s.Leader.Client.GetFromJsonAsync<JsonElement>("/api/v1/notifications"))
+            .EnumerateArray().Count(n => n.GetProperty("type").GetInt32() == 6);
+        Assert.Equal(0, leaderTypes);
+    }
 }

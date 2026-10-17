@@ -314,6 +314,7 @@ in T13 is the core of it. Build the rest of F after A if time is tight.
 - Domain: `GatheringPoint` VO on `Group` (`Address`, `Latitude`, `Longitude`, `GatheringTimeUtc?`).
 - `PUT /groups/{groupId}/gathering-point` (group leader only), `GET /groups/{groupId}/gathering-point` (members).
 - Fires new `NotificationType 6 GatheringPointChanged` to members.
+- _Done:_ `GatheringPoint` VO (+ `UpdatedAtUtc`) owned in the `Groups` row; `Group.SetGatheringPoint` (leader only, validates address ≤ 300 and coordinates, raises `GatheringPointChanged`); `PUT` -> 200 dto (member 403, non-member 404); `GET` -> dto or **204** when not set; type 6 to every member except the changer (preview = address); migration `AddGatheringPoint`.
 
 **T19 — Attendance / check-in**
 - Domain: `Attendance` per member (`Status` 1 Present / 2 Absent, `ConfirmedAtUtc?`).

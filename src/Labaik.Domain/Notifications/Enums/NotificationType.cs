@@ -8,5 +8,6 @@ public enum NotificationType
     MemberJoinedGroup = 2,      // -> group supervisor
     GroupCreated = 3,           // -> company owner
     SupervisorActivated = 4,    // -> company owner (a supervisor was assigned to a group)
-    GroupWithoutSupervisor = 5  // -> company owner (first pilgrim added to a group with no supervisor)
+    GroupWithoutSupervisor = 5, // -> company owner (first pilgrim added to a group with no supervisor)
+    GatheringPointChanged = 6   // -> group members except the supervisor (preview = address)
 }

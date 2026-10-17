@@ -8,6 +8,8 @@ using Labaik.Application.Features.Chat.Commands.SendChatMessage;
 using Labaik.Application.Features.Chat.Queries.GetChatMessages;
 using Labaik.Application.Features.Groups.Commands.CreateGroup;
 using Labaik.Application.Features.Groups.Commands.JoinGroup;
+using Labaik.Application.Features.Groups.Commands.SetGatheringPoint;
+using Labaik.Application.Features.Groups.Queries.GetGatheringPoint;
 using Labaik.Application.Features.Groups.Queries.GetGroupByCode;
 using Labaik.Application.Features.Locations.Queries.GetGroupMemberLocations;
 using MediatR;
@@ -67,6 +69,23 @@ public static class GroupEndpoints
             var result = await sender.Send(new GetGroupMemberLocationsQuery(groupId), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         }).WithSummary("Where are my group members: every member with their shared position (members only)");
+
+        group.MapPut("/{groupId:guid}/gathering-point", async (Guid groupId, SetGatheringPointRequest body, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(SetGatheringPointCommand.From(groupId, body), ct);
+            return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
+        }).WithSummary("Set or move the group's gathering point (group supervisor only; members are notified)");
+
+        group.MapGet("/{groupId:guid}/gathering-point", async (Guid groupId, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new GetGatheringPointQuery(groupId), ct);
+            if (result.IsFailure)
+            {
+                return result.Error!.ToProblem();
+            }
+
+            return result.Value is null ? Results.NoContent() : Results.Ok(result.Value);
+        }).WithSummary("The group's gathering point (members only; 204 when not set yet)");
 
         group.MapPost("/{groupId:guid}/messages", async (Guid groupId, SendChatMessageRequest body, ISender sender, CancellationToken ct) =>
         {

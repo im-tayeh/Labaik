@@ -12,6 +12,15 @@ public static class GroupErrors
     public static Error TripRequired =>
         Error.Validation("Group.TripRequired", "A company group must belong to a company trip.");
 
+    public static Error AddressRequired =>
+        Error.Validation("Group.AddressRequired", "The gathering point address is required.");
+
+    public static Error AddressTooLong =>
+        Error.Validation("Group.AddressTooLong", "The gathering point address is too long.");
+
+    public static Error InvalidCoordinates =>
+        Error.Validation("Group.InvalidCoordinates", "Latitude must be between -90 and 90 and longitude between -180 and 180.");
+
     public static Error MemberNotFound =>
         Error.NotFound("Group.MemberNotFound", "The user is not a member of this group.");
 

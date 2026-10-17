@@ -4,6 +4,7 @@ using Labaik.Domain.Common;
 using Labaik.Domain.Common.Results;
 using Labaik.Domain.Groups.Enums;
 using Labaik.Domain.Groups.Events;
+using Labaik.Domain.Groups.ValueObjects;
 
 namespace Labaik.Domain.Groups;
 
@@ -21,6 +22,9 @@ public sealed class Group : AggregateRoot
 
     private readonly List<GroupMember> _members = [];
     public IReadOnlyList<GroupMember> Members => _members.AsReadOnly();
+
+    // Null until the supervisor sets one.
+    public GatheringPoint? GatheringPoint { get; private set; }
 
     public int MemberCount => _members.Count;
     public int PilgrimCount => _members.Count(m => m.Role == GroupMemberRole.Member);
@@ -148,6 +152,36 @@ public sealed class Group : AggregateRoot
         }
 
         _members.Remove(member);
+        return Result.Success();
+    }
+
+    // Only the supervisor sets where the group gathers; members are notified.
+    public Result SetGatheringPoint(
+        Guid byUserId, string address, double latitude, double longitude, DateTimeOffset? gatheringTimeUtc, DateTimeOffset nowUtc)
+    {
+        if (LeaderId != byUserId)
+        {
+            return Result.Failure(GroupErrors.NotLeader);
+        }
+
+        if (string.IsNullOrWhiteSpace(address))
+        {
+            return Result.Failure(GroupErrors.AddressRequired);
+        }
+
+        address = address.Trim();
+        if (address.Length > GatheringPoint.AddressMaxLength)
+        {
+            return Result.Failure(GroupErrors.AddressTooLong);
+        }
+
+        if (latitude is < -90 or > 90 || longitude is < -180 or > 180 || double.IsNaN(latitude) || double.IsNaN(longitude))
+        {
+            return Result.Failure(GroupErrors.InvalidCoordinates);
+        }
+
+        GatheringPoint = new GatheringPoint(address, latitude, longitude, gatheringTimeUtc, nowUtc);
+        Raise(new GatheringPointChanged(Id, byUserId));
         return Result.Success();
     }
 

@@ -168,4 +168,24 @@ public class CompanyGroupDomainTests
         Assert.Empty(supervised.DomainEvents.OfType<GroupAwaitingSupervisor>());
         Assert.Empty(standalone.DomainEvents.OfType<GroupAwaitingSupervisor>());
     }
+
+    [Fact]
+    public void Only_the_supervisor_sets_a_valid_gathering_point()
+    {
+        var group = NewTripGroup();
+        var supervisor = Guid.NewGuid();
+        var pilgrim = Guid.NewGuid();
+        group.AssignSupervisor(supervisor, Now);
+        group.AddMember(pilgrim, Now);
+        group.ClearDomainEvents();
+
+        Assert.Equal("Group.NotLeader", group.SetGatheringPoint(pilgrim, "Gate 79", 21.42, 39.82, null, Now).Error!.Code);
+        Assert.Equal("Group.AddressRequired", group.SetGatheringPoint(supervisor, " ", 21.42, 39.82, null, Now).Error!.Code);
+        Assert.Equal("Group.InvalidCoordinates", group.SetGatheringPoint(supervisor, "Gate 79", 91, 39.82, null, Now).Error!.Code);
+        Assert.Null(group.GatheringPoint);
+
+        Assert.True(group.SetGatheringPoint(supervisor, " Gate 79 ", 21.42, 39.82, Now.AddHours(2), Now).IsSuccess);
+        Assert.Equal("Gate 79", group.GatheringPoint!.Address);
+        Assert.IsType<GatheringPointChanged>(Assert.Single(group.DomainEvents));
+    }
 }

@@ -727,6 +727,38 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                                 .HasForeignKey("GroupId");
                         });
 
+                    b.OwnsOne("Labaik.Domain.Groups.ValueObjects.GatheringPoint", "GatheringPoint", b1 =>
+                        {
+                            b1.Property<Guid>("GroupId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("Address")
+                                .IsRequired()
+                                .HasMaxLength(300)
+                                .HasColumnType("character varying(300)");
+
+                            b1.Property<DateTimeOffset?>("GatheringTimeUtc")
+                                .HasColumnType("timestamp with time zone");
+
+                            b1.Property<double>("Latitude")
+                                .HasColumnType("double precision");
+
+                            b1.Property<double>("Longitude")
+                                .HasColumnType("double precision");
+
+                            b1.Property<DateTimeOffset>("UpdatedAtUtc")
+                                .HasColumnType("timestamp with time zone");
+
+                            b1.HasKey("GroupId");
+
+                            b1.ToTable("Groups");
+
+                            b1.WithOwner()
+                                .HasForeignKey("GroupId");
+                        });
+
+                    b.Navigation("GatheringPoint");
+
                     b.Navigation("Members");
                 });
 
