@@ -334,6 +334,7 @@ in T13 is the core of it. Build the rest of F after A if time is tight.
 
 **T22 — Multiple groups per supervisor**
 - `GET /supervisor/groups` -> list (name + counts); home supports selection.
+- _Done (no migration):_ `GET /supervisor/groups` (Supervisor policy) -> `{ id, name, tripId?, tripName?, departureDate?, pilgrimCount, presentCount, absentCount }[]`, groups where `LeaderId` = me, soonest departure first; `GET /home?groupId=` picks the group section (member only, else 404; omitted = most recently joined, unchanged).
 
 **T23 — Trip itinerary**
 - Domain: `ItineraryDay` + `ItineraryActivity` (`Title`, `TimeUtc?`, `Place?`) on `Trip`/`Group`.

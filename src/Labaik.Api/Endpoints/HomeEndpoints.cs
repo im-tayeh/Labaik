@@ -18,11 +18,11 @@ public static class HomeEndpoints
             .WithTags("Home")
             .RequireAuthorization();
 
-        group.MapGet("/", async (ISender sender, CancellationToken ct) =>
+        group.MapGet("/", async (ISender sender, CancellationToken ct, Guid? groupId) =>
         {
-            var result = await sender.Send(new GetHomeQuery(), ct);
+            var result = await sender.Send(new GetHomeQuery(groupId), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
-        }).WithSummary("Home screen: journey status, next ritual step, and group summary");
+        }).WithSummary("Home screen: journey status, next ritual step, group summary (optional ?groupId= picks the group)");
 
         return app;
     }

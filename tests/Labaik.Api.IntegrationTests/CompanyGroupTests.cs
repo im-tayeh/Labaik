@@ -197,6 +197,39 @@ public class CompanyGroupTests(LabaikApiFactory factory)
     }
 
     [Fact]
+    public async Task Supervisor_lists_their_groups_with_counts_and_home_can_pick_one()
+    {
+        var (company, _) = await TestUsers.CreateCompanyAsync(factory);
+        var supervisor = await TestUsers.CreateAsync(factory);
+        var pilgrim = await TestUsers.CreateAsync(factory);
+        var groupA = await CreateTripGroupAsync(company, "A");
+        var groupB = await CreateTripGroupAsync(company, "B");
+        foreach (var g in new[] { groupA, groupB })
+        {
+            await company.Client.PutAsJsonAsync($"/api/v1/company/groups/{g}/supervisor", new { email = supervisor.Email });
+        }
+        await company.Client.PostAsJsonAsync($"/api/v1/company/groups/{groupB}/members", new { email = pilgrim.Email });
+        await pilgrim.Client.PostAsync($"/api/v1/groups/{groupB}/attendance/confirm", null);
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await pilgrim.Client.GetAsync("/api/v1/supervisor/groups")).StatusCode);
+
+        var sup = await TestUsers.RefreshAsync(factory, supervisor); // Supervisor role now in the token
+        var groups = (await sup.Client.GetFromJsonAsync<JsonElement>("/api/v1/supervisor/groups")).EnumerateArray().ToList();
+        Assert.Equal(2, groups.Count);
+        var b = groups.Single(g => g.GetProperty("id").GetGuid() == groupB);
+        Assert.Equal(1, b.GetProperty("pilgrimCount").GetInt32());
+        Assert.Equal(1, b.GetProperty("presentCount").GetInt32());
+        Assert.Equal("December Umrah", b.GetProperty("tripName").GetString());
+
+        foreach (var g in new[] { groupA, groupB })
+        {
+            var home = await sup.Client.GetFromJsonAsync<JsonElement>($"/api/v1/home?groupId={g}");
+            Assert.Equal(g, home.GetProperty("group").GetProperty("id").GetGuid());
+        }
+        Assert.Equal(HttpStatusCode.NotFound, (await pilgrim.Client.GetAsync($"/api/v1/home?groupId={groupA}")).StatusCode);
+    }
+
+    [Fact]
     public async Task A_company_cannot_manage_another_companys_trip_or_group()
     {
         var (owner, _) = await TestUsers.CreateCompanyAsync(factory);

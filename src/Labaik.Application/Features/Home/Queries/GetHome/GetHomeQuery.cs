@@ -4,6 +4,7 @@ using Labaik.Application.Features.Home.Dtos;
 using Labaik.Application.Features.Rituals.Common;
 using Labaik.Application.Features.Rituals.Mappers;
 using Labaik.Domain.Common.Results;
+using Labaik.Domain.Groups;
 using Labaik.Domain.Journeys.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -11,7 +12,9 @@ using Microsoft.EntityFrameworkCore;
 namespace Labaik.Application.Features.Home.Queries.GetHome;
 
 // Read-only aggregation for the home screen: one call instead of three. Never creates data.
-public sealed record GetHomeQuery : IRequest<Result<HomeDto>>;
+// GroupId (optional) picks which of the user's groups the group section shows (supervisors of several
+// groups); without it, the most recently joined group. A group the user is not in -> NotFound.
+public sealed record GetHomeQuery(Guid? GroupId = null) : IRequest<Result<HomeDto>>;
 
 public sealed class GetHomeQueryHandler(
     IAppDbContext context,
@@ -33,7 +36,11 @@ public sealed class GetHomeQueryHandler(
             .FirstOrDefaultAsync(cancellationToken);
 
         var ritual = await GetRitualAsync(userId, journey?.PilgrimageType ?? PilgrimageType.Umrah, cancellationToken);
-        var group = await GetGroupAsync(userId, cancellationToken);
+        var group = await GetGroupAsync(userId, request.GroupId, cancellationToken);
+        if (request.GroupId is not null && group is null)
+        {
+            return GroupErrors.NotFound;
+        }
 
         var unreadNotifications = await context.Notifications
             .CountAsync(n => n.UserId == userId && n.ReadAtUtc == null, cancellationToken);
@@ -64,13 +71,13 @@ public sealed class GetHomeQueryHandler(
             type, IsStarted: true, progress.IsCompleted, progress.CompletedSteps.Count, steps.Count, next?.ToDto());
     }
 
-    private async Task<HomeGroupDto?> GetGroupAsync(Guid userId, CancellationToken cancellationToken)
+    private async Task<HomeGroupDto?> GetGroupAsync(Guid userId, Guid? groupId, CancellationToken cancellationToken)
     {
-        // The most recently joined group (a pilgrim normally belongs to one).
+        // The requested group, else the most recently joined one (a pilgrim normally belongs to one).
         var group = await context.Groups
             .Include(g => g.Members)
             .AsNoTracking()
-            .Where(g => g.Members.Any(m => m.UserId == userId))
+            .Where(g => g.Members.Any(m => m.UserId == userId) && (groupId == null || g.Id == groupId))
             .OrderByDescending(g => g.Members.Where(m => m.UserId == userId).Max(m => m.JoinedAtUtc))
             .FirstOrDefaultAsync(cancellationToken);
 

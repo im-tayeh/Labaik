@@ -150,6 +150,7 @@ try
     app.MapAdminEndpoints();
     app.MapCompanyEndpoints();
     app.MapProfileEndpoints();
+    app.MapSupervisorEndpoints();
     app.MapHub<LocationHub>(LocationHub.Path);
     app.MapHub<EventsHub>(EventsHub.Path);
 
