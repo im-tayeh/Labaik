@@ -1,3 +1,4 @@
+using Labaik.Domain.Announcements;
 using Labaik.Domain.Groups;
 using Labaik.Domain.Groups.Enums;
 using Labaik.Domain.Groups.Events;
@@ -49,9 +50,9 @@ public class GroupTests
         var memberId = Guid.NewGuid();
         group.Join(memberId, Now);
 
-        Assert.Equal("Group.NotLeader", group.PostAnnouncement(memberId, "T", "B", Now).Error!.Code);
+        Assert.Equal("Group.NotLeader", group.PostAnnouncement(memberId, new AnnouncementContent("T", "B"), Now).Error!.Code);
 
-        var post = group.PostAnnouncement(LeaderId, " Bus at 6 ", "Lobby", Now);
+        var post = group.PostAnnouncement(LeaderId, new AnnouncementContent(" Bus at 6 ", "Lobby"), Now);
         Assert.True(post.IsSuccess);
         Assert.Equal("Bus at 6", post.Value.Title);
         Assert.Equal(group.Id, post.Value.GroupId);
@@ -93,7 +94,7 @@ public class CompanyGroupDomainTests
     {
         var group = NewTripGroup();
 
-        Assert.Equal("Group.NotLeader", group.PostAnnouncement(Guid.NewGuid(), "T", "B", Now).Error!.Code);
+        Assert.Equal("Group.NotLeader", group.PostAnnouncement(Guid.NewGuid(), new AnnouncementContent("T", "B"), Now).Error!.Code);
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using Labaik.Domain.Announcements;
 using Labaik.Domain.Common;
 using Labaik.Domain.Common.Results;
 using Labaik.Domain.Companies.Events;
@@ -48,6 +49,17 @@ public sealed class Company : AggregateRoot
 
         Name = validName.Value;
         return Result.Success();
+    }
+
+    // Company-wide broadcast to every pilgrim in its groups. The new Announcement is its own aggregate.
+    public Result<Announcement> PostAnnouncement(Guid authorId, AnnouncementContent content, DateTimeOffset postedAtUtc)
+    {
+        if (authorId != OwnerUserId)
+        {
+            return AnnouncementErrors.NotCompanyOwner;
+        }
+
+        return Announcement.CreateForCompany(Id, authorId, content, postedAtUtc);
     }
 
     private static Result<string> ValidateName(string name)

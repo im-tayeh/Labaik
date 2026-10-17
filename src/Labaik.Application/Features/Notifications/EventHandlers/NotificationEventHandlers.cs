@@ -2,6 +2,7 @@ using Labaik.Application.Common.Events;
 using Labaik.Application.Common.Interfaces;
 using Labaik.Application.Features.Notifications.Dtos;
 using Labaik.Domain.Announcements.Events;
+using Labaik.Domain.Groups.Enums;
 using Labaik.Domain.Groups.Events;
 using Labaik.Domain.Notifications;
 using Labaik.Domain.Notifications.Enums;
@@ -10,7 +11,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Labaik.Application.Features.Notifications.EventHandlers;
 
-// New announcement -> notify every member except the author.
+// New announcement -> notify everyone who can see it except the author:
+// a group announcement -> that group's members; a company-wide one -> every pilgrim in the company's groups.
 public sealed class AnnouncementPostedHandler(
     IAppDbContext context,
     IRealtimeNotifier notifier,
@@ -25,11 +27,18 @@ public sealed class AnnouncementPostedHandler(
             .Select(a => a.Title)
             .FirstOrDefaultAsync(cancellationToken);
 
-        var recipients = await context.Groups
-            .Where(g => g.Id == e.GroupId)
-            .SelectMany(g => g.Members.Select(m => m.UserId))
-            .Where(userId => userId != e.AuthorId)
-            .ToListAsync(cancellationToken);
+        var recipients = e.GroupId is { } groupId
+            ? await context.Groups
+                .Where(g => g.Id == groupId)
+                .SelectMany(g => g.Members.Select(m => m.UserId))
+                .Where(userId => userId != e.AuthorId)
+                .ToListAsync(cancellationToken)
+            : await context.Groups
+                .Where(g => g.CompanyId == e.CompanyId)
+                .SelectMany(g => g.Members.Where(m => m.Role == GroupMemberRole.Member).Select(m => m.UserId))
+                .Where(userId => userId != e.AuthorId)
+                .Distinct()
+                .ToListAsync(cancellationToken);
 
         await NotificationWriter.CreateAndPushAsync(
             context, notifier, recipients, NotificationType.AnnouncementPosted,

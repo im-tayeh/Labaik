@@ -1,4 +1,5 @@
 using Labaik.Application.Common.Interfaces;
+using Labaik.Application.Features.Announcements.Dtos;
 using Labaik.Application.Features.Home.Dtos;
 using Labaik.Application.Features.Rituals.Common;
 using Labaik.Application.Features.Rituals.Mappers;
@@ -84,7 +85,8 @@ public sealed class GetHomeQueryHandler(
             : null;
 
         var unread = await context.Announcements
-            .CountAsync(a => a.GroupId == group.Id && !a.Reads.Any(r => r.UserId == userId), cancellationToken);
+            .Where(AnnouncementVisibility.VisibleInGroup(group.Id, group.CompanyId))
+            .CountAsync(a => !a.Reads.Any(r => r.UserId == userId), cancellationToken);
 
         return new HomeGroupDto(group.Id, group.Name, leaderName, group.MemberCount, myRole, unread);
     }

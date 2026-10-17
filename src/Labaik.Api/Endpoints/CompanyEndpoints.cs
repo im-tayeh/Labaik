@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Asp.Versioning.Builder;
 using Labaik.Api.Extensions;
+using Labaik.Application.Features.Announcements.Commands.PostCompanyAnnouncement;
 using Labaik.Application.Features.Companies.Queries.GetCompanyHome;
 using Labaik.Application.Features.Companies.Queries.GetMyCompany;
 using Labaik.Application.Features.Groups.Commands.AddGroupMember;
@@ -40,6 +41,14 @@ public static class CompanyEndpoints
             var result = await sender.Send(new GetCompanyHomeQuery(), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         }).WithSummary("Company dashboard numbers: active trips, pilgrims, supervisors, groups");
+
+        group.MapPost("/announcements", async (PostCompanyAnnouncementCommand command, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(command, ct);
+            return result.IsSuccess
+                ? Results.Created($"/api/v1/company/announcements/{result.Value.Id}", result.Value)
+                : result.Error!.ToProblem();
+        }).WithSummary("Announce to every pilgrim in all my company's groups (audience 2)");
 
         group.MapPost("/trips", async (CreateTripCommand command, ISender sender, CancellationToken ct) =>
         {

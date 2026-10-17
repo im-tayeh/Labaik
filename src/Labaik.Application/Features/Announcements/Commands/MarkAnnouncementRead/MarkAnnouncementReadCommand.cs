@@ -25,11 +25,19 @@ public sealed class MarkAnnouncementReadCommandHandler(
             .Include(a => a.Reads)
             .FirstOrDefaultAsync(a => a.Id == request.AnnouncementId, cancellationToken);
 
-        // Only members of the announcement's group may read it; others get NotFound.
-        var isMember = announcement is not null && await context.Groups
-            .AnyAsync(g => g.Id == announcement.GroupId && g.Members.Any(m => m.UserId == userId), cancellationToken);
+        // Only those who can see it may read it: members of its group, or (company-wide) members of
+        // any of its company's groups. Others get NotFound.
+        var canSee = announcement switch
+        {
+            null => false,
+            { GroupId: { } groupId } => await context.Groups.AnyAsync(
+                g => g.Id == groupId && g.Members.Any(m => m.UserId == userId), cancellationToken),
+            { CompanyId: { } companyId } => await context.Groups.AnyAsync(
+                g => g.CompanyId == companyId && g.Members.Any(m => m.UserId == userId), cancellationToken),
+            _ => false
+        };
 
-        if (announcement is null || !isMember)
+        if (announcement is null || !canSee)
         {
             return Result.Failure(AnnouncementErrors.NotFound);
         }

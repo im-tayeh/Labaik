@@ -150,6 +150,53 @@ public class CompanyGroupTests(LabaikApiFactory factory)
     }
 
     [Fact]
+    public async Task Company_wide_announcement_reaches_pilgrims_of_all_its_groups()
+    {
+        var (company, _) = await TestUsers.CreateCompanyAsync(factory);
+        var (otherCompany, _) = await TestUsers.CreateCompanyAsync(factory);
+        var inA = await TestUsers.CreateAsync(factory);
+        var inB = await TestUsers.CreateAsync(factory);
+        var elsewhere = await TestUsers.CreateAsync(factory);
+        var groupA = await CreateTripGroupAsync(company, "A");
+        var groupB = await CreateTripGroupAsync(company, "B");
+        var otherGroup = await CreateTripGroupAsync(otherCompany, "X");
+        await company.Client.PostAsJsonAsync($"/api/v1/company/groups/{groupA}/members", new { email = inA.Email });
+        await company.Client.PostAsJsonAsync($"/api/v1/company/groups/{groupB}/members", new { email = inB.Email });
+        await otherCompany.Client.PostAsJsonAsync($"/api/v1/company/groups/{otherGroup}/members", new { email = elsewhere.Email });
+
+        var post = await company.Client.PostAsJsonAsync("/api/v1/company/announcements", new
+        {
+            title = "Visa update", body = "Passports to the office by 8", importance = 2,
+            location = "Hotel lobby", imageUrl = "https://cdn.example.com/visa.png"
+        });
+        Assert.Equal(HttpStatusCode.Created, post.StatusCode);
+        var created = await post.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(JsonValueKind.Null, created.GetProperty("groupId").ValueKind);
+        Assert.Equal(2, created.GetProperty("audience").GetInt32());
+        var id = created.GetProperty("id").GetGuid();
+
+        foreach (var (pilgrim, group) in new[] { (inA, groupA), (inB, groupB) })
+        {
+            var list = await pilgrim.Client.GetFromJsonAsync<JsonElement>($"/api/v1/groups/{group}/announcements");
+            var item = Assert.Single(list.EnumerateArray());
+            Assert.Equal(2, item.GetProperty("importance").GetInt32());
+            Assert.Equal("Hotel lobby", item.GetProperty("location").GetString());
+            Assert.Equal(1, (await pilgrim.Client.GetFromJsonAsync<JsonElement>("/api/v1/home"))
+                .GetProperty("group").GetProperty("unreadAnnouncements").GetInt32());
+            Assert.Contains((await pilgrim.Client.GetFromJsonAsync<JsonElement>("/api/v1/notifications")).EnumerateArray(),
+                n => n.GetProperty("type").GetInt32() == 1 && n.GetProperty("referenceId").GetGuid() == id);
+        }
+
+        Assert.Equal(HttpStatusCode.NoContent, (await inA.Client.PostAsync($"/api/v1/announcements/{id}/read", null)).StatusCode);
+        Assert.Equal(0, (await inA.Client.GetFromJsonAsync<JsonElement>("/api/v1/home"))
+            .GetProperty("group").GetProperty("unreadAnnouncements").GetInt32());
+
+        Assert.Empty((await elsewhere.Client.GetFromJsonAsync<JsonElement>($"/api/v1/groups/{otherGroup}/announcements")).EnumerateArray());
+        Assert.Equal(HttpStatusCode.NotFound, (await elsewhere.Client.PostAsync($"/api/v1/announcements/{id}/read", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await inA.Client.PostAsJsonAsync("/api/v1/company/announcements", new { title = "x", body = "y" })).StatusCode);
+    }
+
+    [Fact]
     public async Task A_company_cannot_manage_another_companys_trip_or_group()
     {
         var (owner, _) = await TestUsers.CreateCompanyAsync(factory);

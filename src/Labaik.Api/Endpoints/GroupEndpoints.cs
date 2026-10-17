@@ -56,7 +56,7 @@ public static class GroupEndpoints
 
         group.MapPost("/{groupId:guid}/announcements", async (Guid groupId, PostAnnouncementRequest body, ISender sender, CancellationToken ct) =>
         {
-            var result = await sender.Send(new PostAnnouncementCommand(groupId, body.Title, body.Body), ct);
+            var result = await sender.Send(PostAnnouncementCommand.From(groupId, body), ct);
             return result.IsSuccess
                 ? Results.Created($"/api/v1/groups/{groupId}/announcements", result.Value)
                 : result.Error!.ToProblem();

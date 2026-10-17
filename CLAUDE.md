@@ -330,6 +330,7 @@ in T13 is the core of it. Build the rest of F after A if time is tight.
 **T21 — Announcement enrichment**
 - Add fields (never rename): `Importance` (1 Normal / 2 Important), `GatheringTimeUtc?`, `Location?`, `ImageUrl?`, `Audience` (1 Group / 2 AllCompanyPilgrims).
 - Then Flutter re-enables `unreadAnnouncements` and `POST /announcements/{id}/read`.
+- _Done:_ fields added (request fields optional; `importance` defaults 1); `AnnouncementContent` record validates all content (https image URL, location ≤ 300). **Audience 2 is posted only by the company** via new `POST /company/announcements` (`Company.PostAnnouncement`, owner only); group supervisors always post audience 1. Company-wide announcements: `GroupId` null (**`AnnouncementDto.groupId` now nullable**), shown in every company group's list and unread count (`AnnouncementVisibility.VisibleInGroup`), readable by any member of the company's groups, notification (type 1) to every company pilgrim. Migration `EnrichAnnouncements` (existing rows: audience 1, importance 1).
 
 **T22 — Multiple groups per supervisor**
 - `GET /supervisor/groups` -> list (name + counts); home supports selection.

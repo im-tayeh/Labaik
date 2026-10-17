@@ -7,7 +7,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Labaik.Application.Features.Announcements.Queries.GetGroupAnnouncements;
 
-// Newest first, with the current user's read state.
+// Newest first, with the current user's read state: the group's own announcements plus its
+// company's company-wide ones.
 public sealed record GetGroupAnnouncementsQuery(Guid GroupId) : IRequest<Result<IReadOnlyList<AnnouncementDto>>>;
 
 public sealed class GetGroupAnnouncementsQueryHandler(
@@ -22,33 +23,28 @@ public sealed class GetGroupAnnouncementsQueryHandler(
             return Error.Unauthorized("Auth.Required", "Authentication is required.");
         }
 
-        var isMember = await context.Groups
-            .AnyAsync(g => g.Id == request.GroupId && g.Members.Any(m => m.UserId == userId), cancellationToken);
-        if (!isMember)
+        var group = await context.Groups
+            .AsNoTracking()
+            .Where(g => g.Id == request.GroupId && g.Members.Any(m => m.UserId == userId))
+            .Select(g => new { g.Id, g.CompanyId })
+            .FirstOrDefaultAsync(cancellationToken);
+        if (group is null)
         {
             return GroupErrors.NotFound;
         }
 
         var items = await context.Announcements
             .AsNoTracking()
-            .Where(a => a.GroupId == request.GroupId)
+            .Where(AnnouncementVisibility.VisibleInGroup(group.Id, group.CompanyId))
             .OrderByDescending(a => a.CreatedAtUtc)
-            .Select(a => new
-            {
-                a.Id, a.GroupId, a.Title, a.Body, a.AuthorId, a.CreatedAtUtc,
-                IsRead = a.Reads.Any(r => r.UserId == userId)
-            })
+            .Select(a => new { Announcement = a, IsRead = a.Reads.Any(r => r.UserId == userId) })
             .ToListAsync(cancellationToken);
 
-        var authorNames = new Dictionary<Guid, string?>();
-        foreach (var authorId in items.Select(i => i.AuthorId).Distinct())
-        {
-            authorNames[authorId] = await userDirectory.GetFullNameAsync(authorId, cancellationToken);
-        }
+        var authorNames = await userDirectory.GetFullNamesAsync(
+            items.Select(i => i.Announcement.AuthorId).Distinct().ToList(), cancellationToken);
 
         return items
-            .Select(i => new AnnouncementDto(
-                i.Id, i.GroupId, i.Title, i.Body, i.AuthorId, authorNames[i.AuthorId], i.CreatedAtUtc, i.IsRead))
+            .Select(i => i.Announcement.ToDto(authorNames.GetValueOrDefault(i.Announcement.AuthorId), i.IsRead))
             .ToList();
     }
 }

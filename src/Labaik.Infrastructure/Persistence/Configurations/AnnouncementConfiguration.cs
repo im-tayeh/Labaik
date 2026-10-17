@@ -12,7 +12,10 @@ internal sealed class AnnouncementConfiguration : IEntityTypeConfiguration<Annou
         builder.HasKey(a => a.Id);
         builder.Property(a => a.Title).HasMaxLength(AnnouncementErrors.TitleMaxLength).IsRequired();
         builder.Property(a => a.Body).HasMaxLength(AnnouncementErrors.BodyMaxLength).IsRequired();
-        builder.HasIndex(a => new { a.GroupId, a.CreatedAtUtc }); // group feed, newest first
+        builder.Property(a => a.Location).HasMaxLength(AnnouncementErrors.LocationMaxLength);
+        builder.Property(a => a.ImageUrl).HasMaxLength(AnnouncementErrors.ImageUrlMaxLength);
+        builder.HasIndex(a => new { a.GroupId, a.CreatedAtUtc });                  // group feed, newest first
+        builder.HasIndex(a => new { a.CompanyId, a.Audience, a.CreatedAtUtc });    // company-wide feed
 
         // Reads are appended to saved announcements -> ValueGeneratedNever so new rows INSERT.
         builder.OwnsMany(a => a.Reads, r =>

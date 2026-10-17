@@ -1,3 +1,4 @@
+using Labaik.Domain.Announcements;
 using Labaik.Domain.Groups;
 using Labaik.Domain.Guides;
 using Labaik.Domain.Guides.Enums;
@@ -44,7 +45,7 @@ public class ContentAndMessagingTests
         var memberId = Guid.NewGuid();
         var group = Group.Create("G", "CODE", leaderId, Now).Value;
         group.Join(memberId, Now);
-        var announcement = group.PostAnnouncement(leaderId, "T", "B", Now).Value;
+        var announcement = group.PostAnnouncement(leaderId, new AnnouncementContent("T", "B"), Now).Value;
 
         Assert.True(announcement.IsReadBy(leaderId));
         Assert.False(announcement.IsReadBy(memberId));

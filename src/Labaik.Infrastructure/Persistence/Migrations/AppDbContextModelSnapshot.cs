@@ -29,6 +29,9 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int>("Audience")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("AuthorId")
                         .HasColumnType("uuid");
 
@@ -37,11 +40,28 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)");
 
+                    b.Property<Guid?>("CompanyId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("GroupId")
+                    b.Property<DateTimeOffset?>("GatheringTimeUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("GroupId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("ImageUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("Importance")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -51,6 +71,8 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("GroupId", "CreatedAtUtc");
+
+                    b.HasIndex("CompanyId", "Audience", "CreatedAtUtc");
 
                     b.ToTable("Announcements", (string)null);
                 });
