@@ -175,4 +175,41 @@ public class GroupTests(LabaikApiFactory factory)
             .EnumerateArray().Count(n => n.GetProperty("type").GetInt32() == 6);
         Assert.Equal(0, leaderTypes);
     }
+
+    [Fact]
+    public async Task Attendance_roll_call()
+    {
+        var s = await SetupAsync();
+        var baseUrl = $"/api/v1/groups/{s.GroupId}/attendance";
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await s.Member.Client.GetAsync(baseUrl)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await s.Leader.Client.PostAsync($"{baseUrl}/confirm", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await s.Outsider.Client.PostAsync($"{baseUrl}/confirm", null)).StatusCode);
+
+        var before = await s.Leader.Client.GetFromJsonAsync<JsonElement>(baseUrl);
+        Assert.Equal(0, before.GetProperty("presentCount").GetInt32());
+        Assert.Equal(1, before.GetProperty("absentCount").GetInt32());
+
+        Assert.Equal(HttpStatusCode.NoContent, (await s.Member.Client.PostAsync($"{baseUrl}/confirm", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await s.Member.Client.PostAsync($"{baseUrl}/confirm", null)).StatusCode);
+
+        var after = await s.Leader.Client.GetFromJsonAsync<JsonElement>(baseUrl);
+        var row = Assert.Single(after.GetProperty("members").EnumerateArray());
+        Assert.Equal(1, after.GetProperty("presentCount").GetInt32());
+        Assert.Equal(1, row.GetProperty("status").GetInt32());
+        Assert.Equal("Member", row.GetProperty("fullName").GetString());
+
+        var arrived = (await s.Leader.Client.GetFromJsonAsync<JsonElement>("/api/v1/notifications"))
+            .EnumerateArray().Where(n => n.GetProperty("type").GetInt32() == 7).ToList();
+        Assert.Equal(s.Member.Id, Assert.Single(arrived).GetProperty("referenceId").GetGuid()); // once
+
+        var manual = await s.Leader.Client.PutAsJsonAsync($"{baseUrl}/{s.Member.Id}", new { status = 2 });
+        Assert.Equal(0, (await manual.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("presentCount").GetInt32());
+        Assert.Equal(HttpStatusCode.UnprocessableEntity,
+            (await s.Leader.Client.PutAsJsonAsync($"{baseUrl}/{s.Member.Id}", new { status = 9 })).StatusCode);
+
+        await s.Member.Client.PostAsync($"{baseUrl}/confirm", null);
+        var reset = await s.Leader.Client.PostAsync($"{baseUrl}/reset", null);
+        Assert.Equal(0, (await reset.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("presentCount").GetInt32());
+    }
 }

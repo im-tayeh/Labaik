@@ -188,4 +188,32 @@ public class CompanyGroupDomainTests
         Assert.Equal("Gate 79", group.GatheringPoint!.Address);
         Assert.IsType<GatheringPointChanged>(Assert.Single(group.DomainEvents));
     }
+
+    [Fact]
+    public void Pilgrim_confirms_arrival_once_and_the_supervisor_can_override_and_reset()
+    {
+        var group = NewTripGroup();
+        var supervisor = Guid.NewGuid();
+        var pilgrim = Guid.NewGuid();
+        group.AssignSupervisor(supervisor, Now);
+        group.AddMember(pilgrim, Now);
+        group.ClearDomainEvents();
+        GroupMember Pilgrim() => group.Members.Single(m => m.UserId == pilgrim);
+
+        Assert.Equal(AttendanceStatus.Absent, Pilgrim().AttendanceStatus);
+        Assert.Equal("Group.NotPilgrim", group.ConfirmArrival(supervisor, Now).Error!.Code);
+
+        Assert.True(group.ConfirmArrival(pilgrim, Now).IsSuccess);
+        Assert.True(group.ConfirmArrival(pilgrim, Now.AddMinutes(1)).IsSuccess); // idempotent
+        Assert.Single(group.DomainEvents.OfType<PilgrimArrived>());
+        Assert.Equal(Now, Pilgrim().AttendanceConfirmedAtUtc);
+
+        Assert.Equal("Group.NotLeader", group.SetAttendance(pilgrim, pilgrim, AttendanceStatus.Absent, Now).Error!.Code);
+        Assert.True(group.SetAttendance(supervisor, pilgrim, AttendanceStatus.Absent, Now).IsSuccess);
+        Assert.Null(Pilgrim().AttendanceConfirmedAtUtc);
+
+        group.ConfirmArrival(pilgrim, Now);
+        Assert.True(group.ResetAttendance(supervisor).IsSuccess);
+        Assert.Equal(AttendanceStatus.Absent, Pilgrim().AttendanceStatus);
+    }
 }

@@ -6,10 +6,12 @@ using Labaik.Application.Features.Announcements.Queries.GetGroupAnnouncements;
 using Labaik.Application.Common.Models;
 using Labaik.Application.Features.Chat.Commands.SendChatMessage;
 using Labaik.Application.Features.Chat.Queries.GetChatMessages;
+using Labaik.Application.Features.Groups.Commands.Attendance;
 using Labaik.Application.Features.Groups.Commands.CreateGroup;
 using Labaik.Application.Features.Groups.Commands.JoinGroup;
 using Labaik.Application.Features.Groups.Commands.SetGatheringPoint;
 using Labaik.Application.Features.Groups.Queries.GetGatheringPoint;
+using Labaik.Application.Features.Groups.Queries.GetGroupAttendance;
 using Labaik.Application.Features.Groups.Queries.GetGroupByCode;
 using Labaik.Application.Features.Locations.Queries.GetGroupMemberLocations;
 using MediatR;
@@ -86,6 +88,30 @@ public static class GroupEndpoints
 
             return result.Value is null ? Results.NoContent() : Results.Ok(result.Value);
         }).WithSummary("The group's gathering point (members only; 204 when not set yet)");
+
+        group.MapPost("/{groupId:guid}/attendance/confirm", async (Guid groupId, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new ConfirmArrivalCommand(groupId), ct);
+            return result.IsSuccess ? Results.NoContent() : result.Error!.ToProblem();
+        }).WithSummary("Pilgrim confirms \"I arrived\" (idempotent; notifies the supervisor)");
+
+        group.MapGet("/{groupId:guid}/attendance", async (Guid groupId, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new GetGroupAttendanceQuery(groupId), ct);
+            return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
+        }).WithSummary("Roll call: pilgrims with status and counts (group supervisor only)");
+
+        group.MapPut("/{groupId:guid}/attendance/{userId:guid}", async (Guid groupId, Guid userId, SetAttendanceRequest body, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new SetAttendanceCommand(groupId, userId, body.Status), ct);
+            return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
+        }).WithSummary("Mark a pilgrim present (1) or absent (2) manually (group supervisor only)");
+
+        group.MapPost("/{groupId:guid}/attendance/reset", async (Guid groupId, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new ResetAttendanceCommand(groupId), ct);
+            return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
+        }).WithSummary("Start a new roll call: every pilgrim back to absent (group supervisor only)");
 
         group.MapPost("/{groupId:guid}/messages", async (Guid groupId, SendChatMessageRequest body, ISender sender, CancellationToken ct) =>
         {

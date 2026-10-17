@@ -702,6 +702,12 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                             b1.Property<Guid>("Id")
                                 .HasColumnType("uuid");
 
+                            b1.Property<DateTimeOffset?>("AttendanceConfirmedAtUtc")
+                                .HasColumnType("timestamp with time zone");
+
+                            b1.Property<int>("AttendanceStatus")
+                                .HasColumnType("integer");
+
                             b1.Property<Guid>("GroupId")
                                 .HasColumnType("uuid");
 

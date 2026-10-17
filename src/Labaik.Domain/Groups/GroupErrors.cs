@@ -21,6 +21,12 @@ public static class GroupErrors
     public static Error InvalidCoordinates =>
         Error.Validation("Group.InvalidCoordinates", "Latitude must be between -90 and 90 and longitude between -180 and 180.");
 
+    public static Error NotPilgrim =>
+        Error.Forbidden("Group.NotPilgrim", "Only pilgrims (not the supervisor) confirm attendance.");
+
+    public static Error InvalidAttendanceStatus =>
+        Error.Validation("Group.InvalidAttendanceStatus", "Attendance status must be Present (1) or Absent (2).");
+
     public static Error MemberNotFound =>
         Error.NotFound("Group.MemberNotFound", "The user is not a member of this group.");
 

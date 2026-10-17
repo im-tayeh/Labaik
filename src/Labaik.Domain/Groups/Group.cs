@@ -185,6 +185,69 @@ public sealed class Group : AggregateRoot
         return Result.Success();
     }
 
+    // A pilgrim's "I arrived". Idempotent: confirming again changes nothing and notifies no one.
+    public Result ConfirmArrival(Guid userId, DateTimeOffset nowUtc)
+    {
+        var member = _members.FirstOrDefault(m => m.UserId == userId);
+        if (member is null)
+        {
+            return Result.Failure(GroupErrors.MemberNotFound);
+        }
+
+        if (member.Role != GroupMemberRole.Member)
+        {
+            return Result.Failure(GroupErrors.NotPilgrim);
+        }
+
+        if (member.AttendanceStatus == AttendanceStatus.Present)
+        {
+            return Result.Success();
+        }
+
+        member.SetAttendance(AttendanceStatus.Present, nowUtc);
+        Raise(new PilgrimArrived(Id, userId));
+        return Result.Success();
+    }
+
+    // Supervisor marks a pilgrim present or absent manually.
+    public Result SetAttendance(Guid byUserId, Guid pilgrimId, AttendanceStatus status, DateTimeOffset nowUtc)
+    {
+        if (LeaderId != byUserId)
+        {
+            return Result.Failure(GroupErrors.NotLeader);
+        }
+
+        if (!Enum.IsDefined(status))
+        {
+            return Result.Failure(GroupErrors.InvalidAttendanceStatus);
+        }
+
+        var member = _members.FirstOrDefault(m => m.UserId == pilgrimId && m.Role == GroupMemberRole.Member);
+        if (member is null)
+        {
+            return Result.Failure(GroupErrors.MemberNotFound);
+        }
+
+        member.SetAttendance(status, nowUtc);
+        return Result.Success();
+    }
+
+    // Supervisor starts a new roll call: every pilgrim back to Absent.
+    public Result ResetAttendance(Guid byUserId)
+    {
+        if (LeaderId != byUserId)
+        {
+            return Result.Failure(GroupErrors.NotLeader);
+        }
+
+        foreach (var member in _members.Where(m => m.Role == GroupMemberRole.Member))
+        {
+            member.SetAttendance(AttendanceStatus.Absent, default);
+        }
+
+        return Result.Success();
+    }
+
     // Only the leader broadcasts to the group. The new Announcement is its own aggregate;
     // this group is not modified.
     public Result<Announcement> PostAnnouncement(Guid authorId, string title, string body, DateTimeOffset postedAtUtc)

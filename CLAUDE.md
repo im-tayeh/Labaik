@@ -319,6 +319,7 @@ in T13 is the core of it. Build the rest of F after A if time is tight.
 **T19 — Attendance / check-in**
 - Domain: `Attendance` per member (`Status` 1 Present / 2 Absent, `ConfirmedAtUtc?`).
 - `POST /groups/{groupId}/attendance/confirm` (pilgrim "I arrived"), `GET /groups/{groupId}/attendance` (supervisor list + counts), optional `PUT .../attendance/{userId}` (manual). Fires notification to supervisor on confirm.
+- _Done:_ status on `GroupMember` (`AttendanceStatus` 1 Present / 2 Absent default, `AttendanceConfirmedAtUtc`); `ConfirmArrival` (pilgrims only, idempotent, `PilgrimArrived` event once), `SetAttendance` + `ResetAttendance` (supervisor); extra **`POST .../attendance/reset`** (new roll call; not auto-reset on gathering-point change); new `NotificationType 7 PilgrimArrived` -> supervisor — **so T25's GroupMessagePosted becomes 8**; migration `AddAttendance` (existing rows default to 2).
 
 **T20 — Member profile fields**
 - Add: `MemberNumberInGroup`, `Gender`, `Nationality`, `HealthNotes`, `Notes`, `PhotoUrl`, `Email`.
@@ -344,7 +345,7 @@ in T13 is the core of it. Build the rest of F after A if time is tight.
 - `unreadCount` + read state for group chat; location messages (`Latitude`/`Longitude` + message type) in `ChatMessageDto`; `SenderPhotoUrl`.
 
 **T25 — Missing pilgrim notification types**
-- Optional `NotificationType 7 GroupMessagePosted`. Cover the 4 types in the pilgrim notifications screen (announcement / supervisor message [deferred, needs 1:1] / gathering-point change [T18] / group message).
+- Optional `NotificationType 7 GroupMessagePosted` (**now 8**: 7 was taken by `PilgrimArrived` in T19). Cover the 4 types in the pilgrim notifications screen (announcement / supervisor message [deferred, needs 1:1] / gathering-point change [T18] / group message).
 
 ---
 
