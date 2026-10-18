@@ -43,6 +43,16 @@
 | القيم التعدادية (enums) | تُرسل وتُستقبل كأرقام صحيحة دائماً، وليس كنصوص. الجداول في القسم 4. |
 | المعرّفات | كلها `Guid` كنص. |
 
+### توليد عميل Dart من OpenAPI
+
+- الوثيقة الحية `https://labaik-api.onrender.com/openapi/v1.json` بصيغة **OpenAPI 3.0.4**، ومعها نسخة مطابقة في المستودع `docs/openapi/v1.json`. اختبار في CI يفشل إذا اختلفت النسخة عن الكود.
+- لكل عملية `operationId` ثابت (مثل `Login` و`GetHome` و`SendChatMessage`)، ونوع الاستجابة الفعلي ورموز الحالة، وجسم الطلب إن وُجد.
+- كل enum رقمي، ومعه `x-enum-varnames` (الأسماء) ووصف مثل `1 = Umrah, 2 = Hajj`، فيولّد المولّد enums صالحة في Dart.
+- الحقول التي تقبل `null` معلّمة بـ `nullable: true`.
+- كل عملية لها استجابة `default` من نوع `ProblemDetails` (فيها `code` و`traceId`)، وأخطاء 422 من نوع `HttpValidationProblemDetails`.
+- ما لا تحمله OpenAPI جيداً (أنواع الإشعارات ودلالاتها، وأحداث SignalR، ورموز الأخطاء) موجود في `docs/contract-extras.json`.
+- الأمر المجرّب: `openapi-generator generate -i docs/openapi/v1.json -g dart -o labaik_api` (الإصدار v7.10.0).
+
 ### المصادقة
 
 - كل المسارات تتطلب `Authorization: Bearer <accessToken>` ما عدا مسارات `/auth/*` المذكورة كمسارات عامة في القسم 5.

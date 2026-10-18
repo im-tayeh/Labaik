@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Asp.Versioning.Builder;
 using Labaik.Api.Extensions;
+using Labaik.Api.OpenApi;
 using Labaik.Application.Features.HelpCenter.Commands.MarkLostChildFound;
 using Labaik.Application.Features.HelpCenter.Commands.ReportLostChild;
 using Labaik.Application.Features.HelpCenter.Dtos;
@@ -33,7 +34,9 @@ public static class HelpCenterEndpoints
 
             return result.Value is null ? Results.NoContent() : Results.Ok(result.Value);
         })
+        .WithName("GetMySupervisor")
         .WithSummary("My supervisor's contact (groupId optional; 204 when I am in no supervised group)")
+        .Fails(401, 404)
         .Produces<SupervisorContactDto>()
         .Produces(StatusCodes.Status204NoContent);
 
@@ -50,7 +53,9 @@ public static class HelpCenterEndpoints
                 ? Results.Created($"/api/v1/lost-child-reports/{result.Value.Id}", result.Value)
                 : result.Error!.ToProblem();
         })
+        .WithName("ReportLostChild")
         .WithSummary("Report a lost child (my supervisors are alerted; shareWithNearby also alerts users within 1 km)")
+        .Fails(400, 401).Validates()
         .Produces<LostChildReportDto>(StatusCodes.Status201Created);
 
         reports.MapGet("/mine", async (ISender sender, CancellationToken ct) =>
@@ -58,7 +63,9 @@ public static class HelpCenterEndpoints
             var result = await sender.Send(new GetMyLostChildReportsQuery(), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         })
+        .WithName("GetMyLostChildReports")
         .WithSummary("My lost-child reports, newest first")
+        .Fails(401)
         .Produces<IReadOnlyList<LostChildReportDto>>();
 
         reports.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
@@ -66,7 +73,9 @@ public static class HelpCenterEndpoints
             var result = await sender.Send(new GetLostChildReportQuery(id), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         })
+        .WithName("GetLostChildReport")
         .WithSummary("One report (the reporter or a user it alerted via notification type 11)")
+        .Fails(401, 404)
         .Produces<LostChildReportDto>();
 
         reports.MapPost("/{id:guid}/found", async (Guid id, ISender sender, CancellationToken ct) =>
@@ -74,7 +83,9 @@ public static class HelpCenterEndpoints
             var result = await sender.Send(new MarkLostChildFoundCommand(id), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         })
+        .WithName("MarkLostChildFound")
         .WithSummary("Close my report: the child was found (idempotent; reporter only)")
+        .Fails(401, 403, 404)
         .Produces<LostChildReportDto>();
 
         return app;

@@ -1,6 +1,8 @@
 using Asp.Versioning;
 using Asp.Versioning.Builder;
 using Labaik.Api.Extensions;
+using Labaik.Application.Features.Rituals.Dtos;
+using Labaik.Api.OpenApi;
 using Labaik.Application.Features.Rituals.Commands.CompleteRitualStep;
 using Labaik.Application.Features.Rituals.Commands.ResetRitualProgress;
 using Labaik.Application.Features.Rituals.Queries.GetRitualProgress;
@@ -26,25 +28,37 @@ public static class RitualEndpoints
         {
             var result = await sender.Send(new GetRitualStepsQuery(pilgrimageType), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
-        }).WithSummary("List the published ritual guide steps in order");
+        })
+        .WithName("GetRitualSteps")
+        .WithSummary("List the published ritual guide steps in order")
+        .Returns<IReadOnlyList<RitualStepDto>>().Fails(401).Validates();
 
         group.MapGet("/progress", async (ISender sender, CancellationToken ct, PilgrimageType pilgrimageType = PilgrimageType.Umrah) =>
         {
             var result = await sender.Send(new GetRitualProgressQuery(pilgrimageType), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
-        }).WithSummary("Get the current user's ritual progress (starts it on first call)");
+        })
+        .WithName("GetRitualProgress")
+        .WithSummary("Get the current user's ritual progress (starts it on first call)")
+        .Returns<RitualProgressDto>().Fails(401, 404).Validates();
 
         group.MapPost("/progress/complete", async (CompleteRitualStepCommand command, ISender sender, CancellationToken ct) =>
         {
             var result = await sender.Send(command, ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
-        }).WithSummary("Complete the current ritual step and advance to the next");
+        })
+        .WithName("CompleteRitualStep")
+        .WithSummary("Complete the current ritual step and advance to the next")
+        .Returns<RitualProgressDto>().Fails(401, 404, 409).Validates();
 
         group.MapPost("/progress/reset", async (ResetRitualProgressCommand command, ISender sender, CancellationToken ct) =>
         {
             var result = await sender.Send(command, ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
-        }).WithSummary("Restart the ritual progress from the first step");
+        })
+        .WithName("ResetRitualProgress")
+        .WithSummary("Restart the ritual progress from the first step")
+        .Returns<RitualProgressDto>().Fails(401, 404).Validates();
 
         return app;
     }

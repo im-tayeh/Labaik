@@ -1,6 +1,8 @@
 using Asp.Versioning;
 using Asp.Versioning.Builder;
 using Labaik.Api.Extensions;
+using Labaik.Application.Features.Guides.Dtos;
+using Labaik.Api.OpenApi;
 using Labaik.Application.Features.Guides.Queries.GetGuideArticleById;
 using Labaik.Application.Features.Guides.Queries.GetGuideArticles;
 using Labaik.Domain.Guides.Enums;
@@ -24,13 +26,19 @@ public static class GuideEndpoints
         {
             var result = await sender.Send(new GetGuideArticlesQuery(category), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
-        }).WithSummary("List published guide articles of a category in order (default: Ihram preparation)");
+        })
+        .WithName("GetGuideArticles")
+        .WithSummary("List published guide articles of a category in order (default: Ihram preparation)")
+        .Returns<IReadOnlyList<GuideArticleDto>>().Fails(401).Validates();
 
         group.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
         {
             var result = await sender.Send(new GetGuideArticleByIdQuery(id), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
-        }).WithSummary("Get one guide article");
+        })
+        .WithName("GetGuideArticle")
+        .WithSummary("Get one guide article")
+        .Returns<GuideArticleDto>().Fails(401, 404);
 
         return app;
     }

@@ -43,6 +43,7 @@ public static class CompanyEndpoints
             var result = await sender.Send(new GetMyCompanyQuery(), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         })
+        .WithName("GetMyCompany")
         .WithSummary("The current account's company (welcome header + edit company data screen)")
         .WithResponseExample(StatusCodes.Status200OK, CompanyExamples.Company);
 
@@ -51,6 +52,7 @@ public static class CompanyEndpoints
             var result = await sender.Send(command, ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         })
+        .WithName("UpdateMyCompany")
         .WithSummary("Edit my company's data (name, logo, registration number, place, contacts; contract fields are admin-only)")
         .WithRequestExample(CompanyExamples.UpdateMyCompany)
         .WithResponseExample(StatusCodes.Status200OK, CompanyExamples.Company)
@@ -62,6 +64,7 @@ public static class CompanyEndpoints
             var result = await sender.Send(new GetCompanyHomeQuery(), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         })
+        .WithName("GetCompanyHome")
         .WithSummary("Company dashboard numbers: active trips, pilgrims, roster supervisors, groups")
         .WithResponseExample(StatusCodes.Status200OK, CompanyExamples.Home);
 
@@ -72,6 +75,7 @@ public static class CompanyEndpoints
                 ? Results.Created($"/api/v1/company/supervisors/{result.Value.UserId}", result.Value)
                 : result.Error!.ToProblem();
         })
+        .WithName("AddCompanySupervisor")
         .WithSummary("Create a supervisor account on my roster (new email: temporary password emailed; registered email: linked)")
         .WithRequestExample(CompanyExamples.AddSupervisor)
         .WithResponseExample(StatusCodes.Status201Created, CompanyExamples.Supervisor with { GroupsCount = 0 })
@@ -83,6 +87,7 @@ public static class CompanyEndpoints
             var result = await sender.Send(new GetCompanySupervisorsQuery(), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         })
+        .WithName("GetCompanySupervisors")
         .WithSummary("My supervisor roster, by name, with how many of my groups each supervises")
         .WithResponseExample(StatusCodes.Status200OK, CompanyExamples.Supervisors);
 
@@ -93,6 +98,7 @@ public static class CompanyEndpoints
                 ? Results.Created($"/api/v1/company/announcements/{result.Value.Id}", result.Value)
                 : result.Error!.ToProblem();
         })
+        .WithName("PostCompanyAnnouncement")
         .WithSummary("Announce to every pilgrim in all my company's groups (audience 2)")
         .WithRequestExample(CompanyExamples.Announce)
         .WithResponseExample(StatusCodes.Status201Created, CompanyExamples.Announcement)
@@ -105,6 +111,7 @@ public static class CompanyEndpoints
                 ? Results.Created($"/api/v1/company/trips/{result.Value.Id}", result.Value)
                 : result.Error!.ToProblem();
         })
+        .WithName("CreateTrip")
         .WithSummary("Create a trip for my company")
         .WithRequestExample(CompanyExamples.CreateTrip)
         .WithResponseExample(StatusCodes.Status201Created, CompanyExamples.Trip)
@@ -115,6 +122,7 @@ public static class CompanyEndpoints
             var result = await sender.Send(new GetCompanyTripsQuery(), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         })
+        .WithName("GetCompanyTrips")
         .WithSummary("My company's trips, soonest departure first")
         .WithResponseExample(StatusCodes.Status200OK, CompanyExamples.Trips);
 
@@ -123,6 +131,7 @@ public static class CompanyEndpoints
             var result = await sender.Send(new GetCompanyTripByIdQuery(id), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         })
+        .WithName("GetCompanyTrip")
         .WithSummary("Trip details (my company's trips only)")
         .WithResponseExample(StatusCodes.Status200OK, CompanyExamples.Trip)
         .ProducesProblem(StatusCodes.Status404NotFound);
@@ -132,6 +141,7 @@ public static class CompanyEndpoints
             var result = await sender.Send(UpdateTripCommand.From(id, body), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         })
+        .WithName("UpdateTrip")
         .WithSummary("Edit a trip (all fields)")
         .WithRequestExample(CompanyExamples.UpdateTrip)
         .WithResponseExample(StatusCodes.Status200OK, CompanyExamples.Trip)
@@ -145,6 +155,7 @@ public static class CompanyEndpoints
                 ? Results.Created($"/api/v1/company/trips/{tripId}/groups", result.Value)
                 : result.Error!.ToProblem();
         })
+        .WithName("CreateTripGroup")
         .WithSummary("Create a group under one of my trips (starts without a supervisor)")
         .WithRequestExample(CompanyExamples.CreateGroup)
         .WithResponseExample(StatusCodes.Status201Created, CompanyExamples.NewGroup)
@@ -156,6 +167,7 @@ public static class CompanyEndpoints
             var result = await sender.Send(new GetTripGroupsQuery(tripId), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         })
+        .WithName("GetTripGroups")
         .WithSummary("The groups under one of my trips")
         .WithResponseExample(StatusCodes.Status200OK, new[] { CompanyExamples.Group })
         .ProducesProblem(StatusCodes.Status404NotFound);
@@ -165,6 +177,7 @@ public static class CompanyEndpoints
             var result = await sender.Send(new AddGroupMemberCommand(groupId, body.Email, body.FullName, body.PhoneNumber), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         })
+        .WithName("AddGroupMember")
         .WithSummary("Add a pilgrim by email to one of my groups (unknown email: pilgrim account created, temporary password emailed)")
         .WithRequestExample(CompanyExamples.AddMember)
         .WithResponseExample(StatusCodes.Status200OK, CompanyExamples.Group)
@@ -177,6 +190,7 @@ public static class CompanyEndpoints
             var result = await sender.Send(new GetCompanyGroupMembersQuery(groupId), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         })
+        .WithName("GetCompanyGroupMembers")
         .WithSummary("Members of one of my groups (supervisor first, then pilgrims by number; no health notes)")
         .WithResponseExample(StatusCodes.Status200OK, CompanyExamples.MemberRows)
         .ProducesProblem(StatusCodes.Status404NotFound);
@@ -186,6 +200,7 @@ public static class CompanyEndpoints
             var result = await sender.Send(new GetCompanyGroupMemberQuery(groupId, userId), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         })
+        .WithName("GetCompanyGroupMember")
         .WithSummary("Member card incl. health notes (sensitive) for one of my groups")
         .WithResponseExample(StatusCodes.Status200OK, CompanyExamples.MemberCard)
         .ProducesProblem(StatusCodes.Status404NotFound);
@@ -195,6 +210,7 @@ public static class CompanyEndpoints
             var result = await sender.Send(new RemoveGroupMemberCommand(groupId, userId), ct);
             return result.IsSuccess ? Results.NoContent() : result.Error!.ToProblem();
         })
+        .WithName("RemoveGroupMember")
         .WithSummary("Remove a pilgrim from one of my groups")
         .Produces(StatusCodes.Status204NoContent)
         .ProducesProblem(StatusCodes.Status404NotFound)
@@ -205,6 +221,7 @@ public static class CompanyEndpoints
             var result = await sender.Send(new AssignGroupSupervisorCommand(groupId, body.Email), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         })
+        .WithName("AssignGroupSupervisor")
         .WithSummary("Assign (or replace) the group's supervisor by email; must be on my roster (else 404)")
         .WithRequestExample(CompanyExamples.AssignSupervisor)
         .WithResponseExample(StatusCodes.Status200OK, CompanyExamples.Group)

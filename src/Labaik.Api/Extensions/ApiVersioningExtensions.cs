@@ -1,4 +1,5 @@
 ﻿using Asp.Versioning;
+using Labaik.Api.OpenApi;
 
 namespace Labaik.Api.Extensions;
 
@@ -18,7 +19,8 @@ public static class ApiVersioningExtensions
                 options.GroupNameFormat = "'v'VVV";
                 options.SubstituteApiVersionInUrl = true;
             })
-            .AddOpenApi(); // one OpenAPI document per API version (/openapi/v1.json, ...)
+            // One OpenAPI document per API version (/openapi/v1.json, ...), generator-friendly.
+            .AddOpenApi(options => options.Document.AddContractTransformers());
 
         return services;
     }

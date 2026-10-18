@@ -1,6 +1,8 @@
 using Asp.Versioning;
 using Asp.Versioning.Builder;
 using Labaik.Api.Extensions;
+using Labaik.Application.Features.Home.Dtos;
+using Labaik.Api.OpenApi;
 using Labaik.Application.Features.Home.Queries.GetHome;
 using MediatR;
 
@@ -22,7 +24,10 @@ public static class HomeEndpoints
         {
             var result = await sender.Send(new GetHomeQuery(groupId), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
-        }).WithSummary("Home screen: journey status, next ritual step, group summary (optional ?groupId= picks the group)");
+        })
+        .WithName("GetHome")
+        .WithSummary("Home screen: journey status, next ritual step, group summary (optional ?groupId= picks the group)")
+        .Returns<HomeDto>().Fails(401, 404);
 
         return app;
     }

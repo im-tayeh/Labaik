@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Asp.Versioning.Builder;
 using Labaik.Api.Extensions;
+using Labaik.Api.OpenApi;
 using Labaik.Application.Features.Announcements.Commands.MarkAnnouncementRead;
 using MediatR;
 
@@ -22,7 +23,10 @@ public static class AnnouncementEndpoints
         {
             var result = await sender.Send(new MarkAnnouncementReadCommand(id), ct);
             return result.IsSuccess ? Results.NoContent() : result.Error!.ToProblem();
-        }).WithSummary("Mark an announcement as read by the current user (idempotent)");
+        })
+        .WithName("MarkAnnouncementRead")
+        .WithSummary("Mark an announcement as read by the current user (idempotent)")
+        .ReturnsNoContent().Fails(401, 404);
 
         return app;
     }

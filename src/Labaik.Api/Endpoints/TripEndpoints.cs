@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Asp.Versioning.Builder;
 using Labaik.Api.Extensions;
+using Labaik.Api.OpenApi;
 using Labaik.Application.Features.Trips.Itinerary;
 using MediatR;
 
@@ -23,13 +24,19 @@ public static class TripEndpoints
         {
             var result = await sender.Send(new GetTripItineraryQuery(id), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
-        }).WithSummary("Trip program by day (the company, and supervisors and pilgrims of the trip)");
+        })
+        .WithName("GetTripItinerary")
+        .WithSummary("Trip program by day (the company, and supervisors and pilgrims of the trip)")
+        .Returns<TripItineraryDto>().Fails(401, 404);
 
         group.MapPut("/{id:guid}/itinerary", async (Guid id, ReplaceTripItineraryRequest body, ISender sender, CancellationToken ct) =>
         {
             var result = await sender.Send(new ReplaceTripItineraryCommand(id, body.Days), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
-        }).WithSummary("Replace the whole trip program (the company or a supervisor of the trip)");
+        })
+        .WithName("ReplaceTripItinerary")
+        .WithSummary("Replace the whole trip program (the company or a supervisor of the trip)")
+        .Returns<TripItineraryDto>().Fails(400, 401, 403, 404).Validates();
 
         return app;
     }

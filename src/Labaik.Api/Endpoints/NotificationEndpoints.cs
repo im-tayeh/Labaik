@@ -1,6 +1,8 @@
 using Asp.Versioning;
 using Asp.Versioning.Builder;
 using Labaik.Api.Extensions;
+using Labaik.Application.Features.Notifications.Dtos;
+using Labaik.Api.OpenApi;
 using Labaik.Application.Common.Models;
 using Labaik.Application.Features.Notifications.Commands.MarkAllNotificationsRead;
 using Labaik.Application.Features.Notifications.Commands.MarkNotificationRead;
@@ -26,25 +28,37 @@ public static class NotificationEndpoints
         {
             var result = await sender.Send(new GetMyNotificationsQuery(before, take), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
-        }).WithSummary("My notifications, newest first (cursor: before = oldest createdAtUtc)");
+        })
+        .WithName("GetNotifications")
+        .WithSummary("My notifications, newest first (cursor: before = oldest createdAtUtc)")
+        .Returns<IReadOnlyList<NotificationDto>>().Fails(401).Validates();
 
         group.MapGet("/unread-count", async (ISender sender, CancellationToken ct) =>
         {
             var result = await sender.Send(new GetUnreadNotificationCountQuery(), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
-        }).WithSummary("Number of unread notifications");
+        })
+        .WithName("GetUnreadNotificationCount")
+        .WithSummary("Number of unread notifications")
+        .Returns<UnreadCountDto>().Fails(401);
 
         group.MapPost("/{id:guid}/read", async (Guid id, ISender sender, CancellationToken ct) =>
         {
             var result = await sender.Send(new MarkNotificationReadCommand(id), ct);
             return result.IsSuccess ? Results.NoContent() : result.Error!.ToProblem();
-        }).WithSummary("Mark one notification as read (idempotent)");
+        })
+        .WithName("MarkNotificationRead")
+        .WithSummary("Mark one notification as read (idempotent)")
+        .ReturnsNoContent().Fails(401, 404);
 
         group.MapPost("/read-all", async (ISender sender, CancellationToken ct) =>
         {
             var result = await sender.Send(new MarkAllNotificationsReadCommand(), ct);
             return result.IsSuccess ? Results.NoContent() : result.Error!.ToProblem();
-        }).WithSummary("Mark all my notifications as read");
+        })
+        .WithName("MarkAllNotificationsRead")
+        .WithSummary("Mark all my notifications as read")
+        .ReturnsNoContent().Fails(401);
 
         return app;
     }

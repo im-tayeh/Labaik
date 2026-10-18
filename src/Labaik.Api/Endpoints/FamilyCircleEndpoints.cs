@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Asp.Versioning.Builder;
 using Labaik.Api.Extensions;
+using Labaik.Api.OpenApi;
 using Labaik.Application.Features.FamilyCircles.Commands.CreateFamilyCircle;
 using Labaik.Application.Features.FamilyCircles.Commands.JoinFamilyCircle;
 using Labaik.Application.Features.FamilyCircles.Commands.RemoveFamilyMember;
@@ -33,7 +34,9 @@ public static class FamilyCircleEndpoints
                 ? Results.Created($"/api/v1/family-circles/{result.Value.Id}", result.Value)
                 : result.Error!.ToProblem();
         })
+        .WithName("CreateFamilyCircle")
         .WithSummary("Create a circle (I become its owner; share joinCode)")
+        .Fails(401).Validates()
         .Produces<FamilyCircleDto>(StatusCodes.Status201Created);
 
         group.MapGet("/mine", async (ISender sender, CancellationToken ct) =>
@@ -41,7 +44,9 @@ public static class FamilyCircleEndpoints
             var result = await sender.Send(new GetMyFamilyCirclesQuery(), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         })
+        .WithName("GetMyFamilyCircles")
         .WithSummary("Circles I am in")
+        .Fails(401)
         .Produces<IReadOnlyList<FamilyCircleSummaryDto>>();
 
         group.MapGet("/preview/{code}", async (string code, ISender sender, CancellationToken ct) =>
@@ -49,7 +54,9 @@ public static class FamilyCircleEndpoints
             var result = await sender.Send(new GetFamilyCirclePreviewQuery(code), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         })
+        .WithName("GetFamilyCirclePreview")
         .WithSummary("Name, owner and size of the circle behind a join code (confirm screen)")
+        .Fails(401, 404)
         .Produces<FamilyCirclePreviewDto>();
 
         group.MapPost("/join", async (JoinFamilyCircleCommand command, ISender sender, CancellationToken ct) =>
@@ -57,7 +64,9 @@ public static class FamilyCircleEndpoints
             var result = await sender.Send(command, ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         })
+        .WithName("JoinFamilyCircle")
         .WithSummary("Join a circle by code (the owner gets notification type 12)")
+        .Fails(401, 404, 409).Validates()
         .Produces<FamilyCircleDto>();
 
         group.MapGet("/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
@@ -65,7 +74,9 @@ public static class FamilyCircleEndpoints
             var result = await sender.Send(new GetFamilyCircleQuery(id), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         })
+        .WithName("GetFamilyCircle")
         .WithSummary("Circle details and members (members only)")
+        .Fails(401, 404)
         .Produces<FamilyCircleDto>();
 
         group.MapGet("/{id:guid}/locations", async (Guid id, ISender sender, CancellationToken ct) =>
@@ -73,7 +84,9 @@ public static class FamilyCircleEndpoints
             var result = await sender.Send(new GetFamilyLocationsQuery(id), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         })
+        .WithName("GetFamilyLocations")
         .WithSummary("Members' live positions (only for members who show their location in this circle)")
+        .Fails(401, 404)
         .Produces<IReadOnlyList<FamilyMemberLocationDto>>();
 
         group.MapPut("/{id:guid}/location-sharing", async (Guid id, SetFamilyLocationSharingRequest body, ISender sender, CancellationToken ct) =>
@@ -81,7 +94,9 @@ public static class FamilyCircleEndpoints
             var result = await sender.Send(new SetFamilyLocationSharingCommand(id, body.IsSharing), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         })
+        .WithName("SetFamilyLocationSharing")
         .WithSummary("Show/hide my location in this circle (global sharing via PUT /location/sharing must also be on)")
+        .Fails(401, 404)
         .Produces<FamilyLocationSharingDto>();
 
         group.MapDelete("/{id:guid}/members/{userId:guid}", async (Guid id, Guid userId, ISender sender, CancellationToken ct) =>
@@ -89,7 +104,9 @@ public static class FamilyCircleEndpoints
             var result = await sender.Send(new RemoveFamilyMemberCommand(id, userId), ct);
             return result.IsSuccess ? Results.NoContent() : result.Error!.ToProblem();
         })
+        .WithName("RemoveFamilyMember")
         .WithSummary("Owner removes a member, or I leave (my own userId); the owner cannot leave")
+        .Fails(401, 403, 404, 409)
         .Produces(StatusCodes.Status204NoContent);
 
         return app;
