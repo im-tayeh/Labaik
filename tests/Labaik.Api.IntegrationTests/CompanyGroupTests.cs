@@ -62,8 +62,44 @@ public class CompanyGroupTests(LabaikApiFactory factory)
             (await company.Client.DeleteAsync($"/api/v1/company/groups/{groupId}/members/{pilgrim.Id}")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound,
             (await company.Client.DeleteAsync($"/api/v1/company/groups/{groupId}/members/{pilgrim.Id}")).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await company.Client.PostAsJsonAsync(
-            $"/api/v1/company/groups/{groupId}/members", new { email = $"nobody-{Guid.NewGuid():N}@labaik.test" })).StatusCode);
+    }
+
+    [Fact]
+    public async Task Adding_an_unknown_email_creates_a_pilgrim_who_signs_in_with_the_emailed_password()
+    {
+        var (company, _) = await TestUsers.CreateCompanyAsync(factory, "Pilgrim Maker Travel");
+        var groupId = await CreateTripGroupAsync(company);
+        var email = $"new-pilgrim-{Guid.NewGuid():N}@labaik.test";
+
+        var added = await ReadAsync(await company.Client.PostAsJsonAsync(
+            $"/api/v1/company/groups/{groupId}/members", new { email, fullName = "Ahmad Ali", phoneNumber = "+962791234567" }));
+        Assert.Equal(1, added.GetProperty("pilgrimCount").GetInt32());
+        Assert.Contains("Pilgrim Maker Travel", factory.Emails.LastBodyFor(email));
+
+        var pilgrim = await TestUsers.SignInProvisionedAsync(factory, email);
+        var me = await pilgrim.Client.GetFromJsonAsync<JsonElement>("/api/v1/auth/me");
+        var home = await pilgrim.Client.GetFromJsonAsync<JsonElement>("/api/v1/home");
+        Assert.Empty(me.GetProperty("roles").EnumerateArray()); // pilgrim = no role
+        Assert.Equal("Ahmad Ali", me.GetProperty("name").GetString());
+        Assert.Equal(groupId, home.GetProperty("group").GetProperty("id").GetGuid());
+
+        // Adding again: already a member, no new account or password.
+        Assert.Equal(HttpStatusCode.Conflict, (await company.Client.PostAsJsonAsync(
+            $"/api/v1/company/groups/{groupId}/members", new { email })).StatusCode);
+    }
+
+    [Fact]
+    public async Task Adding_a_registered_pilgrim_sends_no_credentials()
+    {
+        var (company, _) = await TestUsers.CreateCompanyAsync(factory);
+        var pilgrim = await TestUsers.CreateAsync(factory);
+        var groupId = await CreateTripGroupAsync(company);
+
+        await ReadAsync(await company.Client.PostAsJsonAsync($"/api/v1/company/groups/{groupId}/members", new { email = pilgrim.Email }));
+
+        Assert.Null(factory.Emails.TemporaryPasswordFor(pilgrim.Email)); // last email is still the OTP
+        Assert.Equal(HttpStatusCode.OK, (await factory.CreateClient().PostAsJsonAsync("/api/v1/auth/login",
+            new { email = pilgrim.Email, password = TestUsers.Password })).StatusCode);
     }
 
     [Fact]

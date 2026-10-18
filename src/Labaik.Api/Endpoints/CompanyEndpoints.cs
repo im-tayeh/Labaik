@@ -160,13 +160,15 @@ public static class CompanyEndpoints
 
         group.MapPost("/groups/{groupId:guid}/members", async (Guid groupId, AddGroupMemberRequest body, ISender sender, CancellationToken ct) =>
         {
-            var result = await sender.Send(new AddGroupMemberCommand(groupId, body.Email), ct);
+            var result = await sender.Send(new AddGroupMemberCommand(groupId, body.Email, body.FullName, body.PhoneNumber), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         })
-        .WithSummary("Add a pilgrim (existing account, by email) to one of my groups")
+        .WithSummary("Add a pilgrim by email to one of my groups (unknown email: pilgrim account created, temporary password emailed)")
+        .WithRequestExample(CompanyExamples.AddMember)
         .WithResponseExample(StatusCodes.Status200OK, CompanyExamples.Group)
         .ProducesProblem(StatusCodes.Status404NotFound)
-        .ProducesProblem(StatusCodes.Status409Conflict);
+        .ProducesProblem(StatusCodes.Status409Conflict)
+        .ProducesValidationProblem(StatusCodes.Status422UnprocessableEntity);
 
         group.MapDelete("/groups/{groupId:guid}/members/{userId:guid}", async (Guid groupId, Guid userId, ISender sender, CancellationToken ct) =>
         {

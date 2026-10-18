@@ -4,6 +4,7 @@ using Labaik.Application.Features.Companies.Commands.AddCompanySupervisor;
 using Labaik.Application.Features.Companies.Commands.UpdateMyCompany;
 using Labaik.Application.Features.Companies.Dtos;
 using Labaik.Application.Features.Companies.Queries.GetCompanyHome;
+using Labaik.Application.Features.Groups.Commands.AddGroupMember;
 using Labaik.Application.Features.Groups.Commands.AssignGroupSupervisor;
 using Labaik.Application.Features.Groups.Commands.CreateTripGroup;
 using Labaik.Application.Features.Groups.Dtos;
@@ -78,6 +79,8 @@ internal static class CompanyExamples
     public static readonly CompanyGroupDto Group = new(GroupId, TripId, "Group A", "K7P2QX", SupervisorId, "Omar Haddad", PilgrimCount: 38);
 
     public static readonly CompanyGroupDto NewGroup = Group with { SupervisorId = null, SupervisorName = null, PilgrimCount = 0 };
+
+    public static readonly AddGroupMemberRequest AddMember = new("ahmad.pilgrim@example.com", "Ahmad Ali", "+962791234567");
 
     public static readonly AssignGroupSupervisorRequest AssignSupervisor = new(AddSupervisor.Email);
 
