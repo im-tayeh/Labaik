@@ -1,4 +1,5 @@
 using Labaik.Domain.Announcements;
+using Labaik.Domain.Chat;
 using Labaik.Domain.Groups;
 using Labaik.Domain.Groups.Enums;
 using Labaik.Domain.Groups.Events;
@@ -67,6 +68,31 @@ public class GroupTests
         Assert.Equal("Chat.BodyRequired", group.PostMessage(LeaderId, "   ", Now).Error!.Code);
         Assert.Equal("Chat.BodyTooLong", group.PostMessage(LeaderId, new string('x', 2001), Now).Error!.Code);
         Assert.True(group.PostMessage(LeaderId, "hi", Now).IsSuccess);
+    }
+
+    [Fact]
+    public void Location_messages_need_valid_coordinates_and_allow_an_empty_caption()
+    {
+        var group = NewGroup();
+
+        var ok = group.PostMessage(LeaderId, new ChatMessageContent(ChatMessageKind.Location, null, 21.4225, 39.8262), Now).Value;
+        Assert.Equal(ChatMessageKind.Location, ok.Kind);
+        Assert.Equal(string.Empty, ok.Body);
+        Assert.Equal("Chat.InvalidLocation",
+            group.PostMessage(LeaderId, new ChatMessageContent(ChatMessageKind.Location, "here", 95, 39), Now).Error!.Code);
+        Assert.Equal("Chat.InvalidLocation",
+            group.PostMessage(LeaderId, new ChatMessageContent(ChatMessageKind.Location, "here"), Now).Error!.Code);
+    }
+
+    [Fact]
+    public void Chat_read_marker_only_moves_forward_and_is_for_members()
+    {
+        var group = NewGroup();
+
+        Assert.True(group.MarkChatRead(LeaderId, Now).IsSuccess);
+        Assert.True(group.MarkChatRead(LeaderId, Now.AddHours(-1)).IsSuccess);
+        Assert.Equal(Now, group.Members.Single(m => m.UserId == LeaderId).ChatLastReadAtUtc);
+        Assert.Equal("Chat.NotMember", group.MarkChatRead(Guid.NewGuid(), Now).Error!.Code);
     }
 }
 

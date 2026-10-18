@@ -1,3 +1,4 @@
+using Labaik.Application.Features.Chat.Dtos;
 using Labaik.Application.Common.Interfaces;
 using Labaik.Application.Features.Announcements.Dtos;
 using Labaik.Application.Features.Home.Dtos;
@@ -86,7 +87,8 @@ public sealed class GetHomeQueryHandler(
             return null;
         }
 
-        var myRole = group.Members.First(m => m.UserId == userId).Role;
+        var me = group.Members.First(m => m.UserId == userId);
+        var myRole = me.Role;
         var leaderName = group.LeaderId is { } leaderId
             ? await userDirectory.GetFullNameAsync(leaderId, cancellationToken)
             : null;
@@ -95,6 +97,8 @@ public sealed class GetHomeQueryHandler(
             .Where(AnnouncementVisibility.VisibleInGroup(group.Id, group.CompanyId))
             .CountAsync(a => !a.Reads.Any(r => r.UserId == userId), cancellationToken);
 
-        return new HomeGroupDto(group.Id, group.Name, leaderName, group.MemberCount, myRole, unread, group.TripId);
+        var unreadMessages = await context.CountUnreadChatAsync(group.Id, userId, me.ChatLastReadAtUtc, cancellationToken);
+
+        return new HomeGroupDto(group.Id, group.Name, leaderName, group.MemberCount, myRole, unread, group.TripId, unreadMessages);
     }
 }

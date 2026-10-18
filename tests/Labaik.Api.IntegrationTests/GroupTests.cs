@@ -121,6 +121,42 @@ public class GroupTests(LabaikApiFactory factory)
     }
 
     [Fact]
+    public async Task Chat_has_location_messages_sender_photo_and_per_member_read_state()
+    {
+        var s = await SetupAsync();
+        var url = $"/api/v1/groups/{s.GroupId}/messages";
+        await s.Leader.Client.PutAsJsonAsync("/api/v1/me/profile", new { photoUrl = "https://cdn.example.com/leader.jpg" });
+
+        var location = await s.Leader.Client.PostAsJsonAsync(url, new { kind = 2, latitude = 21.4225, longitude = 39.8262, body = "Gate 79" });
+        Assert.Equal(HttpStatusCode.Created, location.StatusCode);
+        var sent = await location.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(2, sent.GetProperty("kind").GetInt32());
+        Assert.Equal(21.4225, sent.GetProperty("latitude").GetDouble());
+        Assert.True(sent.GetProperty("isRead").GetBoolean()); // own message
+        Assert.Equal(HttpStatusCode.UnprocessableEntity,
+            (await s.Leader.Client.PostAsJsonAsync(url, new { kind = 2, body = "no coordinates" })).StatusCode);
+        await s.Leader.Client.PostAsJsonAsync(url, new { body = "Meet there at 6" });
+
+        async Task<int> UnreadAsync() =>
+            (await s.Member.Client.GetFromJsonAsync<JsonElement>($"{url}/unread-count")).GetProperty("count").GetInt32();
+
+        Assert.Equal(2, await UnreadAsync());
+        var home = await s.Member.Client.GetFromJsonAsync<JsonElement>("/api/v1/home");
+        Assert.Equal(2, home.GetProperty("group").GetProperty("unreadMessages").GetInt32());
+
+        var history = (await s.Member.Client.GetFromJsonAsync<JsonElement>(url)).EnumerateArray().ToList();
+        Assert.All(history, m => Assert.False(m.GetProperty("isRead").GetBoolean()));
+        Assert.All(history, m => Assert.Equal("https://cdn.example.com/leader.jpg", m.GetProperty("senderPhotoUrl").GetString()));
+
+        Assert.Equal(HttpStatusCode.NoContent, (await s.Member.Client.PostAsync($"{url}/read", null)).StatusCode);
+        Assert.Equal(0, await UnreadAsync());
+        history = (await s.Member.Client.GetFromJsonAsync<JsonElement>(url)).EnumerateArray().ToList();
+        Assert.All(history, m => Assert.True(m.GetProperty("isRead").GetBoolean()));
+        Assert.Equal(0, (await s.Leader.Client.GetFromJsonAsync<JsonElement>($"{url}/unread-count")).GetProperty("count").GetInt32());
+        Assert.Equal(HttpStatusCode.NotFound, (await s.Outsider.Client.PostAsync($"{url}/read", null)).StatusCode);
+    }
+
+    [Fact]
     public async Task Member_locations_show_positions_only_for_sharers()
     {
         var s = await SetupAsync();

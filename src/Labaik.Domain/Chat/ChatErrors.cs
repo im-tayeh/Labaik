@@ -12,6 +12,12 @@ public static class ChatErrors
     public static Error BodyTooLong =>
         Error.Validation("Chat.BodyTooLong", $"Message text must be at most {BodyMaxLength} characters.");
 
+    public static Error InvalidLocation =>
+        Error.Validation("Chat.InvalidLocation", "A location message needs a valid latitude and longitude.");
+
+    public static Error InvalidKind =>
+        Error.Validation("Chat.InvalidKind", "Unknown message kind.");
+
     public static Error NotMember =>
         Error.Forbidden("Chat.NotMember", "Only group members can send messages.");
 }

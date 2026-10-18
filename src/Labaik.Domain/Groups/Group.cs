@@ -288,14 +288,30 @@ public sealed class Group : AggregateRoot
     }
 
     // Any member may chat in the group. The new ChatMessage is its own aggregate; this group is not modified.
-    public Result<ChatMessage> PostMessage(Guid senderId, string body, DateTimeOffset sentAtUtc)
+    public Result<ChatMessage> PostMessage(Guid senderId, ChatMessageContent content, DateTimeOffset sentAtUtc)
     {
         if (!IsMember(senderId))
         {
             return ChatErrors.NotMember;
         }
 
-        return ChatMessage.Create(Id, senderId, body, sentAtUtc);
+        return ChatMessage.Create(Id, senderId, content, sentAtUtc);
+    }
+
+    public Result<ChatMessage> PostMessage(Guid senderId, string body, DateTimeOffset sentAtUtc)
+        => PostMessage(senderId, ChatMessageContent.Text(body), sentAtUtc);
+
+    // The member has read the group chat up to this moment (the marker never moves back).
+    public Result MarkChatRead(Guid userId, DateTimeOffset readUpToUtc)
+    {
+        var member = _members.FirstOrDefault(m => m.UserId == userId);
+        if (member is null)
+        {
+            return Result.Failure(ChatErrors.NotMember);
+        }
+
+        member.MarkChatRead(readUpToUtc);
+        return Result.Success();
     }
 
     public Result Join(Guid userId, DateTimeOffset joinedAtUtc)

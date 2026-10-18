@@ -34,7 +34,18 @@ public sealed class GroupMember : Entity
 
     internal void PromoteToLeader() => Role = GroupMemberRole.Leader;
 
+    // Group chat messages sent after this are unread for this member (null = nothing read yet).
+    public DateTimeOffset? ChatLastReadAtUtc { get; private set; }
+
     internal void SetNotes(string? notes) => Notes = notes;
+
+    internal void MarkChatRead(DateTimeOffset readUpToUtc)
+    {
+        if (ChatLastReadAtUtc is null || readUpToUtc > ChatLastReadAtUtc)
+        {
+            ChatLastReadAtUtc = readUpToUtc;
+        }
+    }
 
     internal void SetAttendance(AttendanceStatus status, DateTimeOffset nowUtc)
     {

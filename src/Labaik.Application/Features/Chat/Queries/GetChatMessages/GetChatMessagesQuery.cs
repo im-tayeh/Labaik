@@ -30,9 +30,12 @@ public sealed class GetChatMessagesQueryHandler(
             return Error.Unauthorized("Auth.Required", "Authentication is required.");
         }
 
-        var isMember = await context.Groups
-            .AnyAsync(g => g.Id == request.GroupId && g.Members.Any(m => m.UserId == userId), cancellationToken);
-        if (!isMember)
+        var member = await context.Groups
+            .Where(g => g.Id == request.GroupId)
+            .SelectMany(g => g.Members.Where(m => m.UserId == userId))
+            .Select(m => new { m.ChatLastReadAtUtc })
+            .FirstOrDefaultAsync(cancellationToken);
+        if (member is null)
         {
             return GroupErrors.NotFound;
         }
@@ -49,12 +52,7 @@ public sealed class GetChatMessagesQueryHandler(
             .Take(request.Take)
             .ToListAsync(cancellationToken);
 
-        var names = await userDirectory.GetFullNamesAsync(
-            messages.Select(m => m.SenderId).Distinct().ToList(), cancellationToken);
-
-        return messages
-            .Select(m => new ChatMessageDto(
-                m.Id, m.GroupId, m.SenderId, names.GetValueOrDefault(m.SenderId), m.Body, m.SentAtUtc))
-            .ToList();
+        return Result.Success(await messages.ToDtosAsync(
+            context, userDirectory, userId, member.ChatLastReadAtUtc, cancellationToken));
     }
 }

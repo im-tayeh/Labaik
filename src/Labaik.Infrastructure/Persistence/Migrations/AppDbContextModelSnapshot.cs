@@ -91,6 +91,15 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("GroupId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("double precision");
+
                     b.Property<Guid>("SenderId")
                         .HasColumnType("uuid");
 
@@ -921,6 +930,9 @@ namespace Labaik.Infrastructure.Persistence.Migrations
 
                             b1.Property<int>("AttendanceStatus")
                                 .HasColumnType("integer");
+
+                            b1.Property<DateTimeOffset?>("ChatLastReadAtUtc")
+                                .HasColumnType("timestamp with time zone");
 
                             b1.Property<Guid>("GroupId")
                                 .HasColumnType("uuid");

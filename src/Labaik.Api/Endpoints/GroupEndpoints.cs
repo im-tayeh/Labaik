@@ -4,7 +4,12 @@ using Labaik.Api.Extensions;
 using Labaik.Application.Features.Announcements.Commands.PostAnnouncement;
 using Labaik.Application.Features.Announcements.Queries.GetGroupAnnouncements;
 using Labaik.Application.Common.Models;
+using Labaik.Application.Features.Chat.Commands.MarkChatRead;
 using Labaik.Application.Features.Chat.Commands.SendChatMessage;
+using Labaik.Application.Features.Chat.Dtos;
+using Labaik.Application.Features.Chat.Queries.GetChatUnreadCount;
+using Labaik.Application.Features.Notifications.Dtos;
+using Labaik.Domain.Chat;
 using Labaik.Application.Features.Chat.Queries.GetChatMessages;
 using Labaik.Application.Features.Groups.Commands.Attendance;
 using Labaik.Application.Features.Groups.Commands.CreateGroup;
@@ -141,17 +146,38 @@ public static class GroupEndpoints
 
         group.MapPost("/{groupId:guid}/messages", async (Guid groupId, SendChatMessageRequest body, ISender sender, CancellationToken ct) =>
         {
-            var result = await sender.Send(new SendChatMessageCommand(groupId, body.Body), ct);
+            var result = await sender.Send(new SendChatMessageCommand(
+                groupId, body.Body, body.Kind ?? ChatMessageKind.Text, body.Latitude, body.Longitude), ct);
             return result.IsSuccess
                 ? Results.Created($"/api/v1/groups/{groupId}/messages", result.Value)
                 : result.Error!.ToProblem();
-        }).WithSummary("Send a message to the group chat (members only)");
+        })
+        .WithSummary("Send a text (kind 1) or location (kind 2: latitude/longitude, body = caption) message to the group chat (members only)")
+        .Produces<ChatMessageDto>(StatusCodes.Status201Created);
 
         group.MapGet("/{groupId:guid}/messages", async (Guid groupId, ISender sender, CancellationToken ct, DateTimeOffset? before, int take = Paging.DefaultTake) =>
         {
             var result = await sender.Send(new GetChatMessagesQuery(groupId, before, take), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
-        }).WithSummary("Group chat history, newest first (cursor: before = oldest sentAtUtc; members only)");
+        })
+        .WithSummary("Group chat history, newest first, with isRead for me (cursor: before = oldest sentAtUtc; members only)")
+        .Produces<IReadOnlyList<ChatMessageDto>>();
+
+        group.MapPost("/{groupId:guid}/messages/read", async (Guid groupId, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new MarkChatReadCommand(groupId), ct);
+            return result.IsSuccess ? Results.NoContent() : result.Error!.ToProblem();
+        })
+        .WithSummary("Mark the group chat read up to now (idempotent; members only)")
+        .Produces(StatusCodes.Status204NoContent);
+
+        group.MapGet("/{groupId:guid}/messages/unread-count", async (Guid groupId, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new GetChatUnreadCountQuery(groupId), ct);
+            return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
+        })
+        .WithSummary("Unread group chat messages from others (members only)")
+        .Produces<UnreadCountDto>();
 
         return app;
     }

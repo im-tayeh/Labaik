@@ -24,10 +24,7 @@ public sealed class ChatMessageSentHandler(
             return;
         }
 
-        var senderName = await userDirectory.GetFullNameAsync(message.SenderId, cancellationToken);
-        await notifier.ChatMessageSentAsync(
-            message.GroupId,
-            new ChatMessageDto(message.Id, message.GroupId, message.SenderId, senderName, message.Body, message.SentAtUtc),
-            cancellationToken);
+        var dtos = await new[] { message }.ToDtosAsync(context, userDirectory, viewerId: null, viewerLastReadUtc: null, cancellationToken);
+        await notifier.ChatMessageSentAsync(message.GroupId, dtos[0], cancellationToken);
     }
 }

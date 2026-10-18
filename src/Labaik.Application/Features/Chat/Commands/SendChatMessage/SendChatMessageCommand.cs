@@ -9,17 +9,31 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Labaik.Application.Features.Chat.Commands.SendChatMessage;
 
-// HTTP body; the group comes from the route.
-public sealed record SendChatMessageRequest(string Body);
+// HTTP body; the group comes from the route. kind omitted = 1 Text (body required);
+// kind 2 Location needs latitude + longitude (body = optional caption).
+public sealed record SendChatMessageRequest(
+    string? Body,
+    ChatMessageKind? Kind = null,
+    double? Latitude = null,
+    double? Longitude = null);
 
-public sealed record SendChatMessageCommand(Guid GroupId, string Body) : IRequest<Result<ChatMessageDto>>;
+public sealed record SendChatMessageCommand(
+    Guid GroupId,
+    string? Body,
+    ChatMessageKind Kind = ChatMessageKind.Text,
+    double? Latitude = null,
+    double? Longitude = null) : IRequest<Result<ChatMessageDto>>;
 
 public sealed class SendChatMessageCommandValidator : AbstractValidator<SendChatMessageCommand>
 {
     public SendChatMessageCommandValidator()
     {
         RuleFor(x => x.GroupId).NotEmpty();
-        RuleFor(x => x.Body).NotEmpty().MaximumLength(ChatErrors.BodyMaxLength);
+        RuleFor(x => x.Kind).IsInEnum();
+        RuleFor(x => x.Body).MaximumLength(ChatErrors.BodyMaxLength);
+        RuleFor(x => x.Body).NotEmpty().When(x => x.Kind == ChatMessageKind.Text);
+        RuleFor(x => x.Latitude).NotNull().InclusiveBetween(-90, 90).When(x => x.Kind == ChatMessageKind.Location);
+        RuleFor(x => x.Longitude).NotNull().InclusiveBetween(-180, 180).When(x => x.Kind == ChatMessageKind.Location);
     }
 }
 
@@ -47,7 +61,8 @@ public sealed class SendChatMessageCommandHandler(
             return GroupErrors.NotFound;
         }
 
-        var post = group.PostMessage(userId, request.Body, timeProvider.GetUtcNow());
+        var content = new ChatMessageContent(request.Kind, request.Body, request.Latitude, request.Longitude);
+        var post = group.PostMessage(userId, content, timeProvider.GetUtcNow());
         if (post.IsFailure)
         {
             return post.Error!;
@@ -55,9 +70,9 @@ public sealed class SendChatMessageCommandHandler(
 
         var message = post.Value;
         context.ChatMessages.Add(message);
-        await context.SaveChangesAsync(cancellationToken); // ChatMessageSent -> realtime push
+        await context.SaveChangesAsync(cancellationToken); // ChatMessageSent -> realtime push (+ notifications)
 
-        var senderName = await userDirectory.GetFullNameAsync(userId, cancellationToken);
-        return new ChatMessageDto(message.Id, message.GroupId, message.SenderId, senderName, message.Body, message.SentAtUtc);
+        var dtos = await new[] { message }.ToDtosAsync(context, userDirectory, userId, null, cancellationToken);
+        return dtos[0];
     }
 }
