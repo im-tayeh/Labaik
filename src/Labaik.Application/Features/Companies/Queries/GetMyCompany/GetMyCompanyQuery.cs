@@ -21,10 +21,7 @@ public sealed class GetMyCompanyQueryHandler(
             return companyId.Error!;
         }
 
-        return await context.Companies
-            .AsNoTracking()
-            .Where(c => c.Id == companyId.Value)
-            .Select(c => new CompanyDto(c.Id, c.Name))
-            .FirstAsync(cancellationToken);
+        var company = await context.Companies.AsNoTracking().FirstAsync(c => c.Id == companyId.Value, cancellationToken);
+        return company.ToDto();
     }
 }

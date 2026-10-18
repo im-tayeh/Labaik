@@ -110,18 +110,101 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int?>("Category")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("City")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("CommercialRegistrationNumber")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("ContactFullName")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("ContactJobTitle")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ContactMobile")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateOnly?>("ContractEndDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("ContractFileUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<string>("ContractReferenceNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateOnly?>("ContractStartDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Country")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsStopped")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LogoUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<int?>("MaxPilgrims")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("MaxSupervisors")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
 
+                    b.Property<string>("OfficialEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
                     b.Property<Guid>("OwnerUserId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("PrimaryPhone")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<int?>("SubscriptionPeriod")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("SubscriptionPrice")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)");
+
+                    b.Property<string>("VatId")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("CommercialRegistrationNumber")
+                        .IsUnique()
+                        .HasFilter("\"CommercialRegistrationNumber\" <> ''");
 
                     b.HasIndex("OwnerUserId")
                         .IsUnique();
@@ -746,6 +829,45 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                         });
 
                     b.Navigation("Reads");
+                });
+
+            modelBuilder.Entity("Labaik.Domain.Companies.Company", b =>
+                {
+                    b.OwnsOne("Labaik.Domain.Companies.CompanyServices", "EnabledServices", b1 =>
+                        {
+                            b1.Property<Guid>("CompanyId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<bool>("ChatWithGuides")
+                                .HasColumnType("boolean")
+                                .HasColumnName("ServiceChatWithGuides");
+
+                            b1.Property<bool>("DuaAndRituals")
+                                .HasColumnType("boolean")
+                                .HasColumnName("ServiceDuaAndRituals");
+
+                            b1.Property<bool>("GpsTracking")
+                                .HasColumnType("boolean")
+                                .HasColumnName("ServiceGpsTracking");
+
+                            b1.Property<bool>("InstantNotifications")
+                                .HasColumnType("boolean")
+                                .HasColumnName("ServiceInstantNotifications");
+
+                            b1.Property<bool>("ReportsAndStats")
+                                .HasColumnType("boolean")
+                                .HasColumnName("ServiceReportsAndStats");
+
+                            b1.HasKey("CompanyId");
+
+                            b1.ToTable("Companies");
+
+                            b1.WithOwner()
+                                .HasForeignKey("CompanyId");
+                        });
+
+                    b.Navigation("EnabledServices")
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Labaik.Domain.Groups.Group", b =>

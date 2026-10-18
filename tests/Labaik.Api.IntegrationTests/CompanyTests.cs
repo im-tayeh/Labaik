@@ -27,7 +27,7 @@ public class CompanyTests(LabaikApiFactory factory)
         var admin = await TestUsers.GetAdminAsync(factory);
         var (owner, _) = await TestUsers.CreateCompanyAsync(factory);
 
-        var again = await admin.Client.PostAsJsonAsync("/api/v1/admin/companies", new { name = "Second", ownerEmail = owner.Email });
+        var again = await admin.Client.PostAsJsonAsync("/api/v1/admin/companies", TestUsers.NewCompanyBody("Second", owner.Email));
 
         Assert.Equal(HttpStatusCode.Conflict, again.StatusCode);
     }
@@ -37,7 +37,7 @@ public class CompanyTests(LabaikApiFactory factory)
     {
         var admin = await TestUsers.GetAdminAsync(factory);
         var pilgrim = await TestUsers.CreateAsync(factory);
-        var body = new { name = "X Travel", ownerEmail = $"nobody-{Guid.NewGuid():N}@labaik.test" };
+        var body = TestUsers.NewCompanyBody("X Travel", $"nobody-{Guid.NewGuid():N}@labaik.test");
 
         Assert.Equal(HttpStatusCode.NotFound, (await admin.Client.PostAsJsonAsync("/api/v1/admin/companies", body)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await pilgrim.Client.PostAsJsonAsync("/api/v1/admin/companies", body)).StatusCode);

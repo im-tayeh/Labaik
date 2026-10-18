@@ -68,12 +68,21 @@ public static class TestUsers
         var admin = await GetAdminAsync(factory);
         var owner = await CreateAsync(factory, name: "Company Owner");
 
-        var create = await admin.Client.PostAsJsonAsync("/api/v1/admin/companies", new { name = companyName, ownerEmail = owner.Email });
+        var create = await admin.Client.PostAsJsonAsync("/api/v1/admin/companies", NewCompanyBody(companyName, owner.Email));
         Assert.Equal(HttpStatusCode.Created, create.StatusCode);
         var companyId = (await create.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
 
         return (await RefreshAsync(factory, owner), companyId);
     }
+
+    // Minimal valid admin "create company" form (unique registration number per call).
+    public static object NewCompanyBody(string name, string ownerEmail) => new
+    {
+        name,
+        commercialRegistrationNumber = $"CR-{Guid.NewGuid():N}"[..20],
+        contactFullName = "Contact Person",
+        ownerEmail
+    };
 
     public static async Task<TestUser> GetAdminAsync(LabaikApiFactory factory)
     {
