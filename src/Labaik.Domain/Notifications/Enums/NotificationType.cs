@@ -15,6 +15,7 @@ public enum NotificationType
     SupervisorMessagePosted = 9, // -> group pilgrims, when the supervisor writes in the group chat (preview = text);
                                  //    reused for 1:1 supervisor messages once direct chat exists
     EmergencyReported = 10,     // -> supervisors of the pilgrim's groups (referenceId = alert id, preview = pilgrim name)
-    LostChildReported = 11      // -> reporter's supervisors + (if shared) app users sharing a fresh location within 1 km
+    LostChildReported = 11,     // -> reporter's supervisors + (if shared) app users sharing a fresh location within 1 km
                                 //    (referenceId = report id, preview = description)
+    FamilyMemberJoined = 12     // -> family circle owner (referenceId = circle id, preview = new member name)
 }

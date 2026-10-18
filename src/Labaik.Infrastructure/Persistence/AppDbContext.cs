@@ -2,6 +2,7 @@
 using Labaik.Domain.Announcements;
 using Labaik.Domain.Chat;
 using Labaik.Domain.Companies;
+using Labaik.Domain.FamilyCircles;
 using Labaik.Domain.Notifications;
 using Labaik.Domain.Groups;
 using Labaik.Domain.Guides;
@@ -41,6 +42,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<MapPlace> MapPlaces => Set<MapPlace>();
     public DbSet<EmergencyAlert> EmergencyAlerts => Set<EmergencyAlert>();
     public DbSet<LostChildReport> LostChildReports => Set<LostChildReport>();
+    public DbSet<FamilyCircle> FamilyCircles => Set<FamilyCircle>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

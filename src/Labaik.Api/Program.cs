@@ -157,6 +157,7 @@ try
     app.MapTripEndpoints();
     app.MapMapEndpoints();
     app.MapHelpCenterEndpoints();
+    app.MapFamilyCircleEndpoints();
     app.MapHub<LocationHub>(LocationHub.Path);
     app.MapHub<EventsHub>(EventsHub.Path);
 

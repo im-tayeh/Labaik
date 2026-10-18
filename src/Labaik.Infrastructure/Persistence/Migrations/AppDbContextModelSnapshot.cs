@@ -221,6 +221,36 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                     b.ToTable("Companies", (string)null);
                 });
 
+            modelBuilder.Entity("Labaik.Domain.FamilyCircles.FamilyCircle", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("JoinCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("JoinCode")
+                        .IsUnique();
+
+                    b.ToTable("FamilyCircles", (string)null);
+                });
+
             modelBuilder.Entity("Labaik.Domain.Groups.Group", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1052,6 +1082,44 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Supervisors");
+                });
+
+            modelBuilder.Entity("Labaik.Domain.FamilyCircles.FamilyCircle", b =>
+                {
+                    b.OwnsMany("Labaik.Domain.FamilyCircles.FamilyCircleMember", "Members", b1 =>
+                        {
+                            b1.Property<Guid>("Id")
+                                .HasColumnType("uuid");
+
+                            b1.Property<Guid>("CircleId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<bool>("IsSharingLocation")
+                                .HasColumnType("boolean");
+
+                            b1.Property<DateTimeOffset>("JoinedAtUtc")
+                                .HasColumnType("timestamp with time zone");
+
+                            b1.Property<int>("Role")
+                                .HasColumnType("integer");
+
+                            b1.Property<Guid>("UserId")
+                                .HasColumnType("uuid");
+
+                            b1.HasKey("Id");
+
+                            b1.HasIndex("CircleId");
+
+                            b1.HasIndex("UserId", "CircleId")
+                                .IsUnique();
+
+                            b1.ToTable("FamilyCircleMembers", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("CircleId");
+                        });
+
+                    b.Navigation("Members");
                 });
 
             modelBuilder.Entity("Labaik.Domain.Groups.Group", b =>

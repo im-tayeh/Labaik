@@ -1,6 +1,7 @@
 ﻿using Labaik.Domain.Announcements;
 using Labaik.Domain.Chat;
 using Labaik.Domain.Companies;
+using Labaik.Domain.FamilyCircles;
 using Labaik.Domain.Notifications;
 using Labaik.Domain.Groups;
 using Labaik.Domain.Guides;
@@ -32,6 +33,7 @@ public interface IAppDbContext
     DbSet<MapPlace> MapPlaces { get; }
     DbSet<EmergencyAlert> EmergencyAlerts { get; }
     DbSet<LostChildReport> LostChildReports { get; }
+    DbSet<FamilyCircle> FamilyCircles { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
