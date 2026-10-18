@@ -15,6 +15,15 @@ public sealed record CompanyDto(
     string? PrimaryPhone,
     string ContactFullName);
 
+// A supervisor on the company's roster. GroupsCount = the company's groups they currently supervise.
+public sealed record CompanySupervisorDto(
+    Guid UserId,
+    string FullName,
+    string Email,
+    string? PhoneNumber,
+    DateTimeOffset AddedAtUtc,
+    int GroupsCount);
+
 public sealed record CompanyServicesDto(
     bool GpsTracking,
     bool DuaAndRituals,

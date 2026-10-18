@@ -72,6 +72,8 @@ public class CompanyGroupTests(LabaikApiFactory factory)
         var (company, _) = await TestUsers.CreateCompanyAsync(factory);
         var first = await TestUsers.CreateAsync(factory, name: "First Supervisor");
         var second = await TestUsers.CreateAsync(factory, name: "Second Supervisor");
+        await TestUsers.AddToRosterAsync(company, first);
+        await TestUsers.AddToRosterAsync(company, second);
         var groupId = await CreateTripGroupAsync(company);
         var url = $"/api/v1/company/groups/{groupId}/supervisor";
 
@@ -97,6 +99,7 @@ public class CompanyGroupTests(LabaikApiFactory factory)
     {
         var (company, _) = await TestUsers.CreateCompanyAsync(factory);
         var supervisor = await TestUsers.CreateAsync(factory);
+        await TestUsers.AddToRosterAsync(company, supervisor);
         var inBoth = await TestUsers.CreateAsync(factory);
         var inOne = await TestUsers.CreateAsync(factory);
 
@@ -130,6 +133,7 @@ public class CompanyGroupTests(LabaikApiFactory factory)
     {
         var (company, _) = await TestUsers.CreateCompanyAsync(factory);
         var supervisor = await TestUsers.CreateAsync(factory, name: "Khaled Supervisor");
+        await TestUsers.AddToRosterAsync(company, supervisor);
         var first = await TestUsers.CreateAsync(factory);
         var second = await TestUsers.CreateAsync(factory);
         var groupId = await CreateTripGroupAsync(company, "Group Waiting");
@@ -201,6 +205,7 @@ public class CompanyGroupTests(LabaikApiFactory factory)
     {
         var (company, _) = await TestUsers.CreateCompanyAsync(factory);
         var supervisor = await TestUsers.CreateAsync(factory);
+        await TestUsers.AddToRosterAsync(company, supervisor);
         var pilgrim = await TestUsers.CreateAsync(factory);
         var groupA = await CreateTripGroupAsync(company, "A");
         var groupB = await CreateTripGroupAsync(company, "B");
@@ -234,6 +239,7 @@ public class CompanyGroupTests(LabaikApiFactory factory)
     {
         var (company, _) = await TestUsers.CreateCompanyAsync(factory);
         var supervisor = await TestUsers.CreateAsync(factory);
+        await TestUsers.AddToRosterAsync(company, supervisor);
         var pilgrim = await TestUsers.CreateAsync(factory);
         var outsider = await TestUsers.CreateAsync(factory);
         var groupId = await CreateTripGroupAsync(company);

@@ -50,6 +50,18 @@ public static class CompanyErrors
     public static Error NotFound =>
         Error.NotFound("Company.NotFound", "No company found for the current account.");
 
+    public static Error SupervisorRequired =>
+        Error.Validation("Company.SupervisorRequired", "A supervisor account is required.");
+
+    public static Error OwnerCannotBeSupervisor =>
+        Error.Conflict("Company.OwnerCannotBeSupervisor", "The company's owner account cannot be one of its supervisors.");
+
+    public static Error SupervisorAlreadyAdded =>
+        Error.Conflict("Company.SupervisorAlreadyAdded", "This account is already one of the company's supervisors.");
+
+    public static Error SupervisorNotFound =>
+        Error.NotFound("Company.SupervisorNotFound", "No supervisor with this email on the company's roster.");
+
     public static Error NotFoundById =>
         Error.NotFound("Company.NotFound", "Company not found.");
 }

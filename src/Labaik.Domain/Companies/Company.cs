@@ -43,6 +43,10 @@ public sealed class Company : AggregateRoot
     // Suspended by an admin (status Stopped regardless of the contract dates).
     public bool IsStopped { get; private set; }
 
+    // Supervisor roster (accounts the company provisioned or linked).
+    private readonly List<CompanySupervisor> _supervisors = [];
+    public IReadOnlyList<CompanySupervisor> Supervisors => _supervisors.AsReadOnly();
+
     private Company() { } // EF
 
     private Company(Guid ownerUserId, DateTimeOffset createdAtUtc)
@@ -161,6 +165,30 @@ public sealed class Company : AggregateRoot
         PrimaryPhone = profile.PrimaryPhone,
         ContactFullName = profile.ContactFullName
     });
+
+    public Result<CompanySupervisor> AddSupervisor(Guid userId, DateTimeOffset addedAtUtc)
+    {
+        if (userId == Guid.Empty)
+        {
+            return CompanyErrors.SupervisorRequired;
+        }
+
+        if (userId == OwnerUserId)
+        {
+            return CompanyErrors.OwnerCannotBeSupervisor;
+        }
+
+        if (HasSupervisor(userId))
+        {
+            return CompanyErrors.SupervisorAlreadyAdded;
+        }
+
+        var supervisor = new CompanySupervisor(userId, addedAtUtc);
+        _supervisors.Add(supervisor);
+        return supervisor;
+    }
+
+    public bool HasSupervisor(Guid userId) => _supervisors.Any(s => s.UserId == userId);
 
     public void Stop() => IsStopped = true;
 

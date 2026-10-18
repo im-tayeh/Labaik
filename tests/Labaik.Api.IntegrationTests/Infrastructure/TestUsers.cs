@@ -85,6 +85,14 @@ public static class TestUsers
         return await ToUserAsync(factory, email, login);
     }
 
+    // Puts a registered account on the company's supervisor roster (linked, no new password).
+    public static async Task AddToRosterAsync(TestUser company, TestUser supervisor)
+    {
+        var response = await company.Client.PostAsJsonAsync("/api/v1/company/supervisors",
+            new { fullName = "Roster Supervisor", email = supervisor.Email });
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+    }
+
     // Minimal valid admin "create company" form (unique registration number per call).
     public static object NewCompanyBody(string name, string ownerEmail) => new
     {

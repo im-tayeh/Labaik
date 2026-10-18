@@ -10,8 +10,8 @@ namespace Labaik.Application.Features.Companies.Queries.GetCompanyHome;
 
 // Company dashboard numbers:
 // - ActiveTrips: trips not over yet (no return date, or returning today or later, UTC).
-// - PilgrimsCount / SupervisorsCount: distinct people across all the company's groups
-//   (someone in two groups counts once).
+// - PilgrimsCount: distinct pilgrims across all the company's groups (someone in two groups counts once).
+// - SupervisorsCount: supervisors on the company's roster (assigned to a group or not).
 // - GroupsCount: all the company's groups.
 public sealed record CompanyHomeDto(int ActiveTrips, int PilgrimsCount, int SupervisorsCount, int GroupsCount);
 
@@ -39,11 +39,7 @@ public sealed class GetCompanyHomeQueryHandler(
 
         var groupsCount = await groups.CountAsync(cancellationToken);
 
-        var supervisorsCount = await groups
-            .Where(g => g.LeaderId != null)
-            .Select(g => g.LeaderId)
-            .Distinct()
-            .CountAsync(cancellationToken);
+        var supervisorsCount = await context.CountRosterSupervisorsAsync(id, cancellationToken);
 
         var pilgrimsCount = await groups
             .SelectMany(g => g.Members)

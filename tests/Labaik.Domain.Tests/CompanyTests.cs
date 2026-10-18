@@ -84,6 +84,21 @@ public class CompanyTests
     }
 
     [Fact]
+    public void Supervisor_roster_rejects_duplicates_and_the_owner()
+    {
+        var owner = Guid.NewGuid();
+        var company = NewCompany(owner);
+        var supervisor = Guid.NewGuid();
+
+        Assert.True(company.AddSupervisor(supervisor, Now).IsSuccess);
+        Assert.True(company.HasSupervisor(supervisor));
+        Assert.Equal("Company.SupervisorAlreadyAdded", company.AddSupervisor(supervisor, Now).Error!.Code);
+        Assert.Equal("Company.OwnerCannotBeSupervisor", company.AddSupervisor(owner, Now).Error!.Code);
+        Assert.Equal("Company.SupervisorRequired", company.AddSupervisor(Guid.Empty, Now).Error!.Code);
+        Assert.Single(company.Supervisors);
+    }
+
+    [Fact]
     public void Status_and_days_remaining_follow_the_contract_and_stop_flag()
     {
         var company = Company.Create(Details() with { ContractEndDate = Today.AddDays(10) }, Guid.NewGuid(), Now).Value;

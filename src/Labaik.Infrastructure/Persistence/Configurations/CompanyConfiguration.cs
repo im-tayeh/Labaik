@@ -43,5 +43,15 @@ internal sealed class CompanyConfiguration : IEntityTypeConfiguration<Company>
             s.Property(x => x.ReportsAndStats).HasColumnName("ServiceReportsAndStats");
         });
         builder.Navigation(c => c.EnabledServices).IsRequired();
+
+        builder.OwnsMany(c => c.Supervisors, s =>
+        {
+            s.ToTable("CompanySupervisors");
+            s.WithOwner().HasForeignKey("CompanyId");
+            s.HasKey(x => x.Id);
+            s.Property(x => x.Id).ValueGeneratedNever(); // new rows on a saved company must INSERT, not UPDATE
+            s.HasIndex(nameof(CompanySupervisor.UserId), "CompanyId").IsUnique();
+        });
+        builder.Navigation(c => c.Supervisors).UsePropertyAccessMode(PropertyAccessMode.Field);
     }
 }

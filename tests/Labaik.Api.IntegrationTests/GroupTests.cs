@@ -15,6 +15,7 @@ public class GroupTests(LabaikApiFactory factory)
     {
         var (company, _) = await TestUsers.CreateCompanyAsync(factory);
         var leader = await TestUsers.CreateAsync(factory, name: "Leader");
+        await TestUsers.AddToRosterAsync(company, leader);
         var member = await TestUsers.CreateAsync(factory, name: "Member");
         var outsider = await TestUsers.CreateAsync(factory, name: "Outsider");
 

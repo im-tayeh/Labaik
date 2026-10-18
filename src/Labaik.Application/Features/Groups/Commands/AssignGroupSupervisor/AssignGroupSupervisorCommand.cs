@@ -5,12 +5,14 @@ using Labaik.Application.Features.Companies.Common;
 using Labaik.Application.Features.Groups.Common;
 using Labaik.Application.Features.Groups.Dtos;
 using Labaik.Domain.Common.Results;
+using Labaik.Domain.Companies;
 using Labaik.Domain.Groups;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 
 namespace Labaik.Application.Features.Groups.Commands.AssignGroupSupervisor;
 
-// HTTP body; the group comes from the route. The supervisor must already have an account.
+// HTTP body; the group comes from the route. The supervisor must be on my company's roster.
 public sealed record AssignGroupSupervisorRequest(string Email);
 
 // Sets the group's supervisor (replacing any previous one) and grants the global Supervisor role,
@@ -47,10 +49,18 @@ public sealed class AssignGroupSupervisorCommandHandler(
             return GroupErrors.NotFound;
         }
 
+        // Only supervisors on my company's roster (POST /company/supervisors); others look the same as unknown.
         var account = await identityService.FindAccountByEmailAsync(request.Email.Trim(), cancellationToken);
         if (account.IsFailure)
         {
-            return account.Error!;
+            return CompanyErrors.SupervisorNotFound;
+        }
+
+        var supervisorId = account.Value.Id;
+        if (!await context.Companies.AnyAsync(
+                c => c.Id == companyId.Value && c.Supervisors.Any(s => s.UserId == supervisorId), cancellationToken))
+        {
+            return CompanyErrors.SupervisorNotFound;
         }
 
         var assign = group.AssignSupervisor(account.Value.Id, timeProvider.GetUtcNow());

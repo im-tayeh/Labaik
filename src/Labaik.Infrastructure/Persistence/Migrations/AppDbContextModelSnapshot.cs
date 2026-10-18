@@ -866,8 +866,37 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                                 .HasForeignKey("CompanyId");
                         });
 
+                    b.OwnsMany("Labaik.Domain.Companies.CompanySupervisor", "Supervisors", b1 =>
+                        {
+                            b1.Property<Guid>("Id")
+                                .HasColumnType("uuid");
+
+                            b1.Property<DateTimeOffset>("AddedAtUtc")
+                                .HasColumnType("timestamp with time zone");
+
+                            b1.Property<Guid>("CompanyId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<Guid>("UserId")
+                                .HasColumnType("uuid");
+
+                            b1.HasKey("Id");
+
+                            b1.HasIndex("CompanyId");
+
+                            b1.HasIndex("UserId", "CompanyId")
+                                .IsUnique();
+
+                            b1.ToTable("CompanySupervisors", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("CompanyId");
+                        });
+
                     b.Navigation("EnabledServices")
                         .IsRequired();
+
+                    b.Navigation("Supervisors");
                 });
 
             modelBuilder.Entity("Labaik.Domain.Groups.Group", b =>
