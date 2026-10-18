@@ -10,6 +10,12 @@ public sealed record AuthUserSummary(Guid Id, string Email, string FullName, IRe
 // Admin view of an account.
 public sealed record UserAccountDto(Guid Id, string Email, string FullName, bool EmailConfirmed, IReadOnlyList<string> Roles);
 
+// Result of creating (or reusing) an account top-down. TemporaryPassword is set only for a new account.
+public sealed record ProvisionedAccount(Guid Id, string Email, string FullName, string? TemporaryPassword)
+{
+    public bool IsNew => TemporaryPassword is not null;
+}
+
 // A verified identity from an external provider (e.g. Google). Subject is the provider's stable user id.
 public sealed record ExternalIdentity(string Provider, string Subject, string Email, bool EmailVerified, string? FullName);
 

@@ -6,6 +6,7 @@ using Labaik.Application.Common.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Security.Cryptography;
 
 namespace Labaik.Infrastructure.Identity;
 
@@ -189,6 +190,88 @@ internal sealed class IdentityService(
         return user is null
             ? Error.NotFound("User.NotFound", "No account found for this email.")
             : await ToAccountDtoAsync(user);
+    }
+
+    public async Task<Result<ProvisionedAccount>> ProvisionAccountAsync(
+        string fullName, string email, string? phoneNumber, string? role, CancellationToken cancellationToken = default)
+    {
+        fullName = fullName.Trim();
+        email = email.Trim();
+        phoneNumber = string.IsNullOrWhiteSpace(phoneNumber) ? null : phoneNumber.Trim();
+
+        var user = await userManager.FindByEmailAsync(email);
+        string? temporaryPassword = null;
+
+        if (user is null)
+        {
+            temporaryPassword = GenerateTemporaryPassword();
+            user = new ApplicationUser
+            {
+                Id = Guid.NewGuid(),
+                FullName = fullName,
+                Email = email,
+                UserName = email,
+                PhoneNumber = phoneNumber,
+                EmailConfirmed = true // provisioned by a trusted admin/company: no OTP
+            };
+
+            var created = await userManager.CreateAsync(user, temporaryPassword);
+            if (!created.Succeeded) return IdentityFailure("User.CreationFailed", created);
+        }
+        else if (!user.EmailConfirmed)
+        {
+            // Whoever registered this account never proved owning the email: replace their password
+            // with a temporary one sent to the real address (same anti-squatting rule as Google sign-in).
+            temporaryPassword = GenerateTemporaryPassword();
+            if (await userManager.HasPasswordAsync(user))
+            {
+                var removed = await userManager.RemovePasswordAsync(user);
+                if (!removed.Succeeded) return IdentityFailure("User.CreationFailed", removed);
+            }
+
+            var added = await userManager.AddPasswordAsync(user, temporaryPassword);
+            if (!added.Succeeded) return IdentityFailure("User.CreationFailed", added);
+
+            user.FullName = fullName;
+            user.PhoneNumber = phoneNumber ?? user.PhoneNumber;
+            user.EmailConfirmed = true;
+            var updated = await userManager.UpdateAsync(user);
+            if (!updated.Succeeded) return IdentityFailure("User.CreationFailed", updated);
+            await refreshTokenService.RevokeAllForUserAsync(user.Id, cancellationToken);
+        }
+
+        if (role is not null && !await userManager.IsInRoleAsync(user, role))
+        {
+            var granted = await userManager.AddToRoleAsync(user, role);
+            if (!granted.Succeeded) return IdentityFailure("User.RoleChangeFailed", granted);
+        }
+
+        logger.LogInformation("Provisioned account {UserId} (new: {IsNew}, role: {Role}).",
+            user.Id, temporaryPassword is not null, role ?? "Pilgrim");
+        return new ProvisionedAccount(user.Id, user.Email!, user.FullName, temporaryPassword);
+    }
+
+    // 14 characters with every class Identity may require (upper, lower, digit, symbol).
+    private static string GenerateTemporaryPassword()
+    {
+        const string upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+        const string lower = "abcdefghijkmnpqrstuvwxyz";
+        const string digits = "23456789";
+        const string symbols = "!@#$%*?";
+        const string all = upper + lower + digits + symbols;
+
+        var chars = new char[14];
+        chars[0] = upper[RandomNumberGenerator.GetInt32(upper.Length)];
+        chars[1] = lower[RandomNumberGenerator.GetInt32(lower.Length)];
+        chars[2] = digits[RandomNumberGenerator.GetInt32(digits.Length)];
+        chars[3] = symbols[RandomNumberGenerator.GetInt32(symbols.Length)];
+        for (var i = 4; i < chars.Length; i++)
+        {
+            chars[i] = all[RandomNumberGenerator.GetInt32(all.Length)];
+        }
+
+        RandomNumberGenerator.Shuffle(chars.AsSpan());
+        return new string(chars);
     }
 
     public async Task<Result<UserAccountDto>> AddToRoleAsync(Guid userId, string role, CancellationToken cancellationToken = default)

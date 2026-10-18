@@ -78,8 +78,19 @@ public sealed partial class CapturingEmailSender : IEmailSender
             : throw new InvalidOperationException($"No code in the email to {email}.");
     }
 
+    public string LastBodyFor(string email) => _lastBodyByRecipient.TryGetValue(email, out var b)
+        ? b
+        : throw new InvalidOperationException($"No email was sent to {email}.");
+
+    // Temporary password from a provisioning email (null when the email carried none).
+    public string? TemporaryPasswordFor(string email) =>
+        TemporaryPassword().Match(LastBodyFor(email)) is { Success: true } m ? m.Groups[1].Value : null;
+
     [GeneratedRegex(@"\b\d{6}\b")]
     private static partial Regex SixDigits();
+
+    [GeneratedRegex(@"Temporary password: (\S+)")]
+    private static partial Regex TemporaryPassword();
 }
 
 internal static class ServiceCollectionExtensions

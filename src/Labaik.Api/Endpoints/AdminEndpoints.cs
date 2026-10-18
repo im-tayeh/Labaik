@@ -44,7 +44,7 @@ public static class AdminEndpoints
             return result.IsSuccess
                 ? Results.Created($"/api/v1/admin/companies/{result.Value.Id}", result.Value)
                 : result.Error!.ToProblem();
-        }).WithSummary("Create a company for an existing account and grant it the Company role (admin)");
+        }).WithSummary("Create a company and its owner account (new email: temporary password emailed; registered email: linked as owner)");
 
         return app;
     }

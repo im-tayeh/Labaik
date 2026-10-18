@@ -75,6 +75,16 @@ public static class TestUsers
         return (await RefreshAsync(factory, owner), companyId);
     }
 
+    // Signs in a provisioned account with the temporary password from its email.
+    public static async Task<TestUser> SignInProvisionedAsync(LabaikApiFactory factory, string email)
+    {
+        var password = factory.Emails.TemporaryPasswordFor(email)
+            ?? throw new InvalidOperationException($"No temporary password was emailed to {email}.");
+        var login = await factory.CreateClient().PostAsJsonAsync("/api/v1/auth/login", new { email, password });
+        Assert.Equal(HttpStatusCode.OK, login.StatusCode);
+        return await ToUserAsync(factory, email, login);
+    }
+
     // Minimal valid admin "create company" form (unique registration number per call).
     public static object NewCompanyBody(string name, string ownerEmail) => new
     {
