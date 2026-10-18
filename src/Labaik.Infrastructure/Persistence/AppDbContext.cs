@@ -5,6 +5,7 @@ using Labaik.Domain.Companies;
 using Labaik.Domain.Notifications;
 using Labaik.Domain.Groups;
 using Labaik.Domain.Guides;
+using Labaik.Domain.HelpCenter;
 using Labaik.Domain.Identity;
 using Labaik.Domain.Journeys;
 using Labaik.Domain.Locations;
@@ -39,6 +40,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<PilgrimProfile> PilgrimProfiles => Set<PilgrimProfile>();
     public DbSet<MapPlace> MapPlaces => Set<MapPlace>();
     public DbSet<EmergencyAlert> EmergencyAlerts => Set<EmergencyAlert>();
+    public DbSet<LostChildReport> LostChildReports => Set<LostChildReport>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

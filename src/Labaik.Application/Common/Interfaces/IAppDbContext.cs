@@ -4,6 +4,7 @@ using Labaik.Domain.Companies;
 using Labaik.Domain.Notifications;
 using Labaik.Domain.Groups;
 using Labaik.Domain.Guides;
+using Labaik.Domain.HelpCenter;
 using Labaik.Domain.Journeys;
 using Labaik.Domain.Locations;
 using Labaik.Domain.Map;
@@ -30,6 +31,7 @@ public interface IAppDbContext
     DbSet<PilgrimProfile> PilgrimProfiles { get; }
     DbSet<MapPlace> MapPlaces { get; }
     DbSet<EmergencyAlert> EmergencyAlerts { get; }
+    DbSet<LostChildReport> LostChildReports { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
