@@ -38,7 +38,7 @@ public sealed class Company : AggregateRoot
     public string? ContactJobTitle { get; private set; }
     public string? ContactMobile { get; private set; }
 
-    public CompanyServices EnabledServices { get; private set; } = CompanyServices.None;
+    public CompanyServices EnabledServices { get; private set; } = CompanyServices.All;
 
     // Suspended by an admin (status Stopped regardless of the contract dates).
     public bool IsStopped { get; private set; }
@@ -149,7 +149,7 @@ public sealed class Company : AggregateRoot
         ContactFullName = contactName;
         ContactJobTitle = jobTitle;
         ContactMobile = mobile;
-        EnabledServices = details.EnabledServices ?? CompanyServices.None;
+        EnabledServices = details.EnabledServices ?? CompanyServices.All; // omitted -> full package
         return Result.Success();
     }
 
@@ -270,4 +270,5 @@ public sealed record CompanyServices(
     bool ReportsAndStats)
 {
     public static CompanyServices None { get; } = new(false, false, false, false, false);
+    public static CompanyServices All { get; } = new(true, true, true, true, true);
 }

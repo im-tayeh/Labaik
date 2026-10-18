@@ -25,7 +25,7 @@ public class CompanyTests
         Assert.Equal("Al Noor Travel", company.Name);
         Assert.Equal("Makkah", company.City);
         Assert.Null(company.VatId);
-        Assert.Equal(CompanyServices.None, company.EnabledServices);
+        Assert.Equal(CompanyServices.All, company.EnabledServices); // omitted -> every service on
         Assert.IsType<CompanyCreated>(Assert.Single(company.DomainEvents));
     }
 

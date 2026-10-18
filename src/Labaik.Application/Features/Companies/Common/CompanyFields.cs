@@ -32,7 +32,7 @@ public abstract record CompanyFields
     public string? ContactJobTitle { get; init; }
     public string? ContactMobile { get; init; }
 
-    // Omitted -> every service off.
+    // Omitted -> every service on.
     public CompanyServicesDto? EnabledServices { get; init; }
 
     public CompanyDetails ToDetails() => new(
