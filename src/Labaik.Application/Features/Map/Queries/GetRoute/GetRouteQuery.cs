@@ -23,7 +23,7 @@ public sealed class GetRouteQueryValidator : AbstractValidator<GetRouteQuery>
         RuleFor(x => x.FromLat).InclusiveBetween(-90, 90);
         RuleFor(x => x.FromLng).InclusiveBetween(-180, 180);
         RuleFor(x => x).Must(x => x.DestinationId is not null || (x.ToLat is not null && x.ToLng is not null))
-            .WithName("destination")
+            .OverridePropertyName("destination")
             .WithMessage("Give destinationId, or toLat and toLng.");
         RuleFor(x => x.ToLat).InclusiveBetween(-90, 90).When(x => x.ToLat is not null);
         RuleFor(x => x.ToLng).InclusiveBetween(-180, 180).When(x => x.ToLng is not null);

@@ -70,7 +70,9 @@ No `Contracts` or `Client` project — backend only.
   **HTTP 422** with an `errors` dictionary.
 - **Error handling**: `GlobalExceptionHandler` + `ValidationExceptionHandler` emit
   **RFC 9457 ProblemDetails** with a `traceId` correlating responses to Serilog
-  logs. Business `Error`s map to HTTP via `error.ToProblem()` in endpoints.
+  logs. Business `Error`s map to HTTP via `error.ToProblem()` in endpoints, which also sets a
+  `code` extension = `Error.Code` (clients branch on it). 422 `errors` keys are camelCase JSON
+  paths (`stays[0].placeName`), converted once in `ValidationExceptionHandler`.
 - **Ownership authorization**: any handler on user-owned data loads the entity and
   verifies `entity.UserId == ICurrentUser.Id`; otherwise returns `NotFound`
   (never leak existence).

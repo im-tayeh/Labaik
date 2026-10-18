@@ -1,7 +1,7 @@
-﻿using FluentValidation;
+﻿using System.Text.Json;
+using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
-using System.ComponentModel.DataAnnotations;
 
 namespace Labaik.Api.Handlers;
 
@@ -18,8 +18,10 @@ internal sealed class ValidationExceptionHandler(IProblemDetailsService problemD
             return false; // Not ours: let the next handler try.
         }
 
+        // Keys are JSON paths in the same camelCase as the request body: "fullName", "arrival.entryPoint",
+        // "stays[0].placeName". Done here once for every validator.
         var errors = validationException.Errors
-            .GroupBy(failure => failure.PropertyName)
+            .GroupBy(failure => ToJsonPath(failure.PropertyName))
             .ToDictionary(
                 group => group.Key,
                 group => group.Select(failure => failure.ErrorMessage).ToArray());
@@ -41,4 +43,14 @@ internal sealed class ValidationExceptionHandler(IProblemDetailsService problemD
             ProblemDetails = problemDetails
         });
     }
+
+    // "Stays[0].PlaceName" -> "stays[0].placeName" (each segment camelCased, indexers kept).
+    internal static string ToJsonPath(string propertyPath) =>
+        string.Join('.', propertyPath.Split('.').Select(segment =>
+        {
+            var bracket = segment.IndexOf('[');
+            return bracket < 0
+                ? JsonNamingPolicy.CamelCase.ConvertName(segment)
+                : JsonNamingPolicy.CamelCase.ConvertName(segment[..bracket]) + segment[bracket..];
+        }));
 }

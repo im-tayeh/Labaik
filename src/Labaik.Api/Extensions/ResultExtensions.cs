@@ -4,6 +4,8 @@ namespace Labaik.Api.Extensions;
 
 public static class ResultExtensions
 {
+    // Business errors -> RFC 9457 ProblemDetails. "code" carries the Error's stable machine-readable code
+    // (e.g. "Group.AlreadyMember") so clients branch on it instead of on the English title.
     public static IResult ToProblem(this Error error) => Results.Problem(
         title: error.Description,
         statusCode: error.Type switch
@@ -15,5 +17,6 @@ public static class ResultExtensions
             ErrorType.Forbidden => StatusCodes.Status403Forbidden,
             ErrorType.TooManyRequests => StatusCodes.Status429TooManyRequests,
             _ => StatusCodes.Status400BadRequest
-        });
+        },
+        extensions: new Dictionary<string, object?> { ["code"] = error.Code });
 }
