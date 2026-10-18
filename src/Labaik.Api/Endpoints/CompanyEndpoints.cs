@@ -1,7 +1,9 @@
 using Asp.Versioning;
 using Asp.Versioning.Builder;
 using Labaik.Api.Extensions;
+using Labaik.Api.OpenApi;
 using Labaik.Application.Features.Announcements.Commands.PostCompanyAnnouncement;
+using Labaik.Application.Features.Companies.Commands.UpdateMyCompany;
 using Labaik.Application.Features.Companies.Queries.GetCompanyHome;
 using Labaik.Application.Features.Companies.Queries.GetMyCompany;
 using Labaik.Application.Features.Groups.Commands.AddGroupMember;
@@ -34,7 +36,20 @@ public static class CompanyEndpoints
         {
             var result = await sender.Send(new GetMyCompanyQuery(), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
-        }).WithSummary("The current account's company (welcome header)");
+        })
+        .WithSummary("The current account's company (welcome header + edit company data screen)")
+        .WithResponseExample(StatusCodes.Status200OK, CompanyExamples.Company);
+
+        group.MapPut("/me", async (UpdateMyCompanyCommand command, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(command, ct);
+            return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
+        })
+        .WithSummary("Edit my company's data (name, logo, registration number, place, contacts; contract fields are admin-only)")
+        .WithRequestExample(CompanyExamples.UpdateMyCompany)
+        .WithResponseExample(StatusCodes.Status200OK, CompanyExamples.Company)
+        .ProducesProblem(StatusCodes.Status409Conflict)
+        .ProducesValidationProblem(StatusCodes.Status422UnprocessableEntity);
 
         group.MapGet("/home", async (ISender sender, CancellationToken ct) =>
         {

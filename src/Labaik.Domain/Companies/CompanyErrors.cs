@@ -49,4 +49,7 @@ public static class CompanyErrors
 
     public static Error NotFound =>
         Error.NotFound("Company.NotFound", "No company found for the current account.");
+
+    public static Error NotFoundById =>
+        Error.NotFound("Company.NotFound", "Company not found.");
 }
