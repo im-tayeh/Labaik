@@ -46,15 +46,22 @@ public sealed class Journey : AggregateRoot
         return new Journey(userId, type, isFirstTime, party);
     }
 
-    public Result UpdateDetails(bool isFirstTime, TravelParty party)
+    // pilgrimageType null keeps the current type (the ritual guide and home follow the journey's type).
+    public Result UpdateDetails(bool isFirstTime, TravelParty party, PilgrimageType? pilgrimageType = null)
     {
         if (!IsEditable)
         {
             return Result.Failure(JourneyErrors.NotEditable(Status));
         }
 
+        if (pilgrimageType is { } type && !Enum.IsDefined(type))
+        {
+            return Result.Failure(JourneyErrors.InvalidPilgrimageType);
+        }
+
         IsFirstTime = isFirstTime;
         TravelParty = party;
+        PilgrimageType = pilgrimageType ?? PilgrimageType;
         return Result.Success();
     }
 

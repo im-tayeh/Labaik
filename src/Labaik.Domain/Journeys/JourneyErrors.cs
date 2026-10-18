@@ -5,6 +5,9 @@ namespace Labaik.Domain.Journeys;
 
 public static class JourneyErrors
 {
+    public static Error InvalidPilgrimageType =>
+        Error.Validation("Journey.InvalidPilgrimageType", "Unknown pilgrimage type.");
+
     public static Error UserRequired =>
         Error.Validation("Journey.UserRequired", "A journey must belong to a user.");
 

@@ -336,6 +336,7 @@ in T13 is the core of it. Build the rest of F after A if time is tight.
 - `HealthNotes` is sensitive PII — restrict to supervisor/company, never in public DTOs.
 - `GET /groups/{groupId}/members/{userId}` (supervisor).
 - _Done:_ personal fields in a new `PilgrimProfile` aggregate (`Gender` 1/2, `Nationality` ISO alpha-2, `PhotoUrl` https, `HealthNotes`), written **by the pilgrim** via `GET/PUT /me/profile`; `GroupMember` gains `MemberNumber` (auto, join order, never reused via `Group.LastMemberNumber`; migration backfills existing pilgrims) and supervisor `Notes` (`PUT /groups/{groupId}/members/{userId}/notes`); `Email` from the account. `GroupMemberDetailsDto` (with `HealthNotes`) is returned **only** to the group's supervisor — never reuse it in lists. **Open:** no file upload service (PhotoUrl is a URL); company read access to member cards not built yet. Migration `AddMemberProfiles`.
+- _Updated (B1, 18 Oct 2026):_ company reads the same card via `GET /company/groups/{groupId}/members/{userId}`; member lists without health notes (`GroupMemberRowDto`, supervisor first) at `GET /groups/{groupId}/members` (supervisor) and `GET /company/groups/{groupId}/members`. Card/row DTOs live in `Groups/Common/MemberCards.cs`.
 
 **T21 — Announcement enrichment**
 - Add fields (never rename): `Importance` (1 Normal / 2 Important), `GatheringTimeUtc?`, `Location?`, `ImageUrl?`, `Audience` (1 Group / 2 AllCompanyPilgrims).
@@ -357,9 +358,11 @@ in T13 is the core of it. Build the rest of F after A if time is tight.
 
 **T24 — Chat enhancements**
 - `unreadCount` + read state for group chat; location messages (`Latitude`/`Longitude` + message type) in `ChatMessageDto`; `SenderPhotoUrl`.
+- _Done (B2):_ `ChatMessage.Kind` (1 Text / 2 Location) + `Latitude`/`Longitude` (body = optional caption); per-member read marker `GroupMember.ChatLastReadAtUtc` (never moves back); `POST /groups/{id}/messages/read` (204), `GET /groups/{id}/messages/unread-count`, `home.group.unreadMessages`; `ChatMessageDto` gains `kind, latitude, longitude, senderPhotoUrl, isRead` (for the viewer; realtime pushes carry `false`). Migration `ChatReadStateAndLocationMessages`.
 
 **T25 — Missing pilgrim notification types**
 - Optional `NotificationType 7 GroupMessagePosted` (**now 8**: 7 was taken by `PilgrimArrived` in T19). Cover the 4 types in the pilgrim notifications screen (announcement / supervisor message [deferred, needs 1:1] / gathering-point change [T18] / group message).
+- _Done (B3, no migration):_ 8 `GroupMessagePosted` (pilgrim wrote in group chat -> other members) and 9 `SupervisorMessagePosted` (group supervisor wrote -> pilgrims; reused for 1:1 later). Pilgrim screen mapping: 1 announcement, 9 supervisor message, 6 gathering point, 8 group message. Later types: 10 `EmergencyReported`, 11 `LostChildReported`, 12 `FamilyMemberJoined`.
 
 ---
 
@@ -367,12 +370,15 @@ in T13 is the core of it. Build the rest of F after A if time is tight.
 
 **T26 — Field mode (map)**
 - `GET /map/destinations?type=` (Haram gates + images, seed data), `GET /map/route`, `POST /map/emergency`, unify `POST /map/location` with `/location`.
+- _Done (B4):_ `MapPlace` (type 1 MainGate / 2 SubGate / 3 Facility + `facilityKind`) seeded by key from `Seed/haram-map.json` by `MapPlaceSeeder` (**coordinates and gate numbers approximate, PendingReview**; `imageUrl` null -> app images); `GET /map/route?fromLat&fromLng&(destinationId|toLat&toLng)` = straight-line distance/bearing/walking minutes (turn-by-turn is the client SDK's); `EmergencyAlert` via `POST /map/emergency` -> type 10 to the pilgrim's supervisors, `GET /map/emergency/{id}`, `POST .../resolve`; `POST /map/location` runs the same command as `POST /location`. Migration `AddFieldModeMap`.
 
 **T27 — Help center**
 - `GET /pilgrim/supervisor` (supervisor contact for pilgrim), `POST /lost-child-reports`.
+- _Done (B5):_ `GET /pilgrim/supervisor[?groupId=]` (204 when unsupervised); `LostChildReport` (approxAge 0-17, description, https photoUrl?, lat/lng, locationDescription?, shareWithNearby) with `POST /lost-child-reports`, `GET /mine`, `GET /{id}` (reporter or alerted user), `POST /{id}/found` (reporter); type 11 to the reporter's supervisors and, if shared, users sharing a fresh location within 1 km. Migration `AddLostChildReports`.
 
 **T28 — Family circle**
 - Full section (invite/accept + location sharing within the circle), independent of the company group.
+- _Done (B6):_ `FamilyCircle` (owner + members ≤ 20, join code) under `/family-circles`: create, `GET /mine`, `GET /preview/{code}`, `POST /join`, `GET /{id}`, `GET /{id}/locations`, `PUT /{id}/location-sharing`, `DELETE /{id}/members/{userId}` (owner removes; self = leave; owner cannot leave). A member's position shows only with the per-circle flag **and** global sharing on; `LocationHub` also joins `circle:{id}` at connect and pushes the same `LocationUpdated`/`StoppedSharing`. Type 12 to the owner on join. "Start chat" has no backend (1:1 deferred). Migration `AddFamilyCircles`.
 
 ---
 
@@ -382,6 +388,7 @@ in T13 is the core of it. Build the rest of F after A if time is tight.
 - Departure time: app sends one date; server wants `arrivalAtUtc` per stay. Current owner decision: same date for all stays. (Alt: make `arrivalAtUtc` optional, or add trip-level `departureAtUtc`.)
 - `pilgrimageType` in `PUT`: **Decision: allow editing it.**
 - Frontend-only fields with no server home: route city order, traveler name, "not decided yet" — keep in Flutter.
+- _Done (B7, no migration):_ `PUT /journeys/{id}` accepts optional `pilgrimageType` (omitted = unchanged; the ritual guide and home follow it). **Single departure date kept:** the app sends its one date as `arrivalAtUtc` of every stay; the server still requires it per stay. **No server home (stay in Flutter):** route city order, traveler name, the "not decided yet" choices, the multi-select travel party (server gets one `travelParty`: Group, else Family, else Solo), and an unanswered `isFirstTime` (sent as `false`).
 
 ---
 

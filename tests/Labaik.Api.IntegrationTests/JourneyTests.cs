@@ -84,4 +84,28 @@ public class JourneyTests(LabaikApiFactory factory)
 
         Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
     }
+
+    [Fact]
+    public async Task Pilgrimage_type_is_editable_and_kept_when_omitted()
+    {
+        var user = await TestUsers.CreateAsync(factory);
+        var id = await CreateJourneyAsync(user);
+        var url = $"/api/v1/journeys/{id}";
+        var stay = new[] { new { cityName = "Makkah", accommodationType = 1, placeName = "Hotel", arrivalAtUtc = "2026-11-01T10:00:00Z" } };
+
+        var changed = await (await user.Client.PutAsJsonAsync(url, new
+        {
+            isFirstTime = true, travelParty = 1, arrival = new { mode = 1, entryPoint = "Jeddah" }, stays = stay, pilgrimageType = 2
+        })).Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(2, changed.GetProperty("pilgrimageType").GetInt32());
+
+        var kept = await (await user.Client.PutAsJsonAsync(url, Edit("Hotel B", "2026-11-02T10:00:00Z")))
+            .Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(2, kept.GetProperty("pilgrimageType").GetInt32());
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, (await user.Client.PutAsJsonAsync(url, new
+        {
+            isFirstTime = true, travelParty = 1, arrival = new { mode = 1, entryPoint = "Jeddah" }, stays = stay, pilgrimageType = 9
+        })).StatusCode);
+    }
 }

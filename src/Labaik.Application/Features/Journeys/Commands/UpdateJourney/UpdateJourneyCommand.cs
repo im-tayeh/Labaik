@@ -11,22 +11,26 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Labaik.Application.Features.Journeys.Commands.UpdateJourney;
 
-// HTTP body for the edit screen; same arrival/stay shapes as onboarding. PilgrimageType is not editable.
+// HTTP body for the edit screen; same arrival/stay shapes as onboarding.
+// pilgrimageType is optional: omitted keeps the current type (additive; older clients unaffected).
+// The app asks for one departure date and sends it as arrivalAtUtc of every stay (owner decision).
 public sealed record UpdateJourneyRequest(
     bool IsFirstTime,
     TravelParty TravelParty,
     CreateJourneyArrival Arrival,
-    List<CreateJourneyStay> Stays);
+    List<CreateJourneyStay> Stays,
+    PilgrimageType? PilgrimageType = null);
 
 public sealed record UpdateJourneyCommand(
     Guid JourneyId,
     bool IsFirstTime,
     TravelParty TravelParty,
     CreateJourneyArrival Arrival,
-    List<CreateJourneyStay> Stays) : IRequest<Result<JourneyDto>>
+    List<CreateJourneyStay> Stays,
+    PilgrimageType? PilgrimageType = null) : IRequest<Result<JourneyDto>>
 {
     public static UpdateJourneyCommand From(Guid journeyId, UpdateJourneyRequest body)
-        => new(journeyId, body.IsFirstTime, body.TravelParty, body.Arrival, body.Stays);
+        => new(journeyId, body.IsFirstTime, body.TravelParty, body.Arrival, body.Stays, body.PilgrimageType);
 }
 
 public sealed class UpdateJourneyCommandValidator : AbstractValidator<UpdateJourneyCommand>
@@ -35,6 +39,7 @@ public sealed class UpdateJourneyCommandValidator : AbstractValidator<UpdateJour
     {
         RuleFor(x => x.JourneyId).NotEmpty();
         RuleFor(x => x.TravelParty).IsInEnum();
+        RuleFor(x => x.PilgrimageType).IsInEnum();
         RuleFor(x => x.Arrival).NotNull();
         RuleFor(x => x.Arrival.Mode).IsInEnum().When(x => x.Arrival is not null);
         RuleFor(x => x.Arrival.EntryPoint).NotEmpty().MaximumLength(200).When(x => x.Arrival is not null);
@@ -68,7 +73,7 @@ public sealed class UpdateJourneyCommandHandler(
             return JourneyErrors.NotFound;
         }
 
-        var details = journey.UpdateDetails(request.IsFirstTime, request.TravelParty);
+        var details = journey.UpdateDetails(request.IsFirstTime, request.TravelParty, request.PilgrimageType);
         if (details.IsFailure)
         {
             return details.Error!;
