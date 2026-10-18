@@ -12,6 +12,8 @@ using Labaik.Application.Features.Groups.Commands.AddGroupMember;
 using Labaik.Application.Features.Groups.Commands.AssignGroupSupervisor;
 using Labaik.Application.Features.Groups.Commands.CreateTripGroup;
 using Labaik.Application.Features.Groups.Commands.RemoveGroupMember;
+using Labaik.Application.Features.Groups.Queries.GetGroupMember;
+using Labaik.Application.Features.Groups.Queries.GetGroupMembers;
 using Labaik.Application.Features.Groups.Queries.GetTripGroups;
 using Labaik.Application.Features.Trips.Commands.CreateTrip;
 using Labaik.Application.Features.Trips.Commands.UpdateTrip;
@@ -169,6 +171,24 @@ public static class CompanyEndpoints
         .ProducesProblem(StatusCodes.Status404NotFound)
         .ProducesProblem(StatusCodes.Status409Conflict)
         .ProducesValidationProblem(StatusCodes.Status422UnprocessableEntity);
+
+        group.MapGet("/groups/{groupId:guid}/members", async (Guid groupId, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new GetCompanyGroupMembersQuery(groupId), ct);
+            return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
+        })
+        .WithSummary("Members of one of my groups (supervisor first, then pilgrims by number; no health notes)")
+        .WithResponseExample(StatusCodes.Status200OK, CompanyExamples.MemberRows)
+        .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapGet("/groups/{groupId:guid}/members/{userId:guid}", async (Guid groupId, Guid userId, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new GetCompanyGroupMemberQuery(groupId, userId), ct);
+            return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
+        })
+        .WithSummary("Member card incl. health notes (sensitive) for one of my groups")
+        .WithResponseExample(StatusCodes.Status200OK, CompanyExamples.MemberCard)
+        .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapDelete("/groups/{groupId:guid}/members/{userId:guid}", async (Guid groupId, Guid userId, ISender sender, CancellationToken ct) =>
         {

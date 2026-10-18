@@ -7,11 +7,14 @@ using Labaik.Application.Features.Companies.Queries.GetCompanyHome;
 using Labaik.Application.Features.Groups.Commands.AddGroupMember;
 using Labaik.Application.Features.Groups.Commands.AssignGroupSupervisor;
 using Labaik.Application.Features.Groups.Commands.CreateTripGroup;
+using Labaik.Application.Features.Groups.Common;
 using Labaik.Application.Features.Groups.Dtos;
 using Labaik.Application.Features.Trips.Commands.CreateTrip;
 using Labaik.Application.Features.Trips.Commands.UpdateTrip;
 using Labaik.Application.Features.Trips.Dtos;
 using Labaik.Domain.Announcements.Enums;
+using Labaik.Domain.Groups.Enums;
+using Labaik.Domain.Profiles.Enums;
 using Labaik.Domain.Journeys.Enums;
 using Labaik.Domain.Trips.Enums;
 
@@ -81,6 +84,21 @@ internal static class CompanyExamples
     public static readonly CompanyGroupDto NewGroup = Group with { SupervisorId = null, SupervisorName = null, PilgrimCount = 0 };
 
     public static readonly AddGroupMemberRequest AddMember = new("ahmad.pilgrim@example.com", "Ahmad Ali", "+962791234567");
+
+    private static readonly Guid PilgrimId = Guid.Parse("8b9c0d1e-2f30-4a41-9b52-c3d4e5f6a7b8");
+
+    public static readonly IReadOnlyList<GroupMemberRowDto> MemberRows =
+    [
+        new(SupervisorId, "Omar Haddad", "omar@alnoor.example", GroupMemberRole.Leader, null, Gender.Male, "SA", null,
+            AttendanceStatus.Absent, new DateTimeOffset(2026, 10, 18, 12, 0, 0, TimeSpan.Zero)),
+        new(PilgrimId, "Ahmad Ali", "ahmad.pilgrim@example.com", GroupMemberRole.Member, 15, Gender.Male, "JO",
+            "https://cdn.example.com/u/ahmad.jpg", AttendanceStatus.Present, new DateTimeOffset(2026, 10, 18, 12, 5, 0, TimeSpan.Zero))
+    ];
+
+    public static readonly GroupMemberDetailsDto MemberCard = new(
+        PilgrimId, "Ahmad Ali", "ahmad.pilgrim@example.com", GroupMemberRole.Member, 15, Gender.Male, "JO",
+        "https://cdn.example.com/u/ahmad.jpg", HealthNotes: "Diabetic; carries insulin", Notes: "Needs a wheelchair at Tawaf",
+        AttendanceStatus.Present, new DateTimeOffset(2026, 10, 18, 12, 5, 0, TimeSpan.Zero));
 
     public static readonly AssignGroupSupervisorRequest AssignSupervisor = new(AddSupervisor.Email);
 

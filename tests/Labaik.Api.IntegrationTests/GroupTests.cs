@@ -240,4 +240,34 @@ public class GroupTests(LabaikApiFactory factory)
         Assert.Equal(HttpStatusCode.UnprocessableEntity,
             (await s.Member.Client.PutAsJsonAsync("/api/v1/me/profile", new { nationality = "JORDAN" })).StatusCode);
     }
+
+    [Fact]
+    public async Task Company_reads_member_cards_and_lists_without_health_notes()
+    {
+        var s = await SetupAsync();
+        await s.Member.Client.PutAsJsonAsync("/api/v1/me/profile", new { gender = 1, nationality = "SA", healthNotes = "Asthma" });
+        var (otherCompany, _) = await TestUsers.CreateCompanyAsync(factory);
+
+        var card = await s.Company.Client.GetFromJsonAsync<JsonElement>($"/api/v1/company/groups/{s.GroupId}/members/{s.Member.Id}");
+        Assert.Equal("Asthma", card.GetProperty("healthNotes").GetString());
+        Assert.Equal(1, card.GetProperty("memberNumberInGroup").GetInt32());
+        Assert.Equal(s.Member.Email, card.GetProperty("email").GetString());
+
+        foreach (var (client, url) in new[]
+                 {
+                     (s.Company.Client, $"/api/v1/company/groups/{s.GroupId}/members"),
+                     (s.Leader.Client, $"/api/v1/groups/{s.GroupId}/members")
+                 })
+        {
+            var rows = (await client.GetFromJsonAsync<JsonElement>(url)).EnumerateArray().ToList();
+            Assert.Equal(2, rows.Count);
+            Assert.Equal(s.Leader.Id, rows[0].GetProperty("userId").GetGuid()); // supervisor first
+            Assert.Equal("SA", rows[1].GetProperty("nationality").GetString());
+            Assert.All(rows, r => Assert.False(r.TryGetProperty("healthNotes", out _)));
+        }
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await s.Member.Client.GetAsync($"/api/v1/groups/{s.GroupId}/members")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound,
+            (await otherCompany.Client.GetAsync($"/api/v1/company/groups/{s.GroupId}/members/{s.Member.Id}")).StatusCode);
+    }
 }

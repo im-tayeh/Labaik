@@ -11,7 +11,9 @@ using Labaik.Application.Features.Groups.Commands.CreateGroup;
 using Labaik.Application.Features.Groups.Commands.JoinGroup;
 using Labaik.Application.Features.Groups.Commands.SetGatheringPoint;
 using Labaik.Application.Features.Groups.Commands.SetMemberNotes;
+using Labaik.Application.Features.Groups.Common;
 using Labaik.Application.Features.Groups.Queries.GetGroupMember;
+using Labaik.Application.Features.Groups.Queries.GetGroupMembers;
 using Labaik.Application.Features.Groups.Queries.GetGatheringPoint;
 using Labaik.Application.Features.Groups.Queries.GetGroupAttendance;
 using Labaik.Application.Features.Groups.Queries.GetGroupByCode;
@@ -115,11 +117,21 @@ public static class GroupEndpoints
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         }).WithSummary("Start a new roll call: every pilgrim back to absent (group supervisor only)");
 
+        group.MapGet("/{groupId:guid}/members", async (Guid groupId, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new GetGroupMembersQuery(groupId), ct);
+            return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
+        })
+        .WithSummary("Member list: supervisor first, then pilgrims by member number; no health notes (group supervisor only)")
+        .Produces<IReadOnlyList<GroupMemberRowDto>>();
+
         group.MapGet("/{groupId:guid}/members/{userId:guid}", async (Guid groupId, Guid userId, ISender sender, CancellationToken ct) =>
         {
             var result = await sender.Send(new GetGroupMemberQuery(groupId, userId), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
-        }).WithSummary("Member card incl. health notes (group supervisor only)");
+        })
+        .WithSummary("Member card incl. health notes (group supervisor only)")
+        .Produces<GroupMemberDetailsDto>();
 
         group.MapPut("/{groupId:guid}/members/{userId:guid}/notes", async (Guid groupId, Guid userId, SetMemberNotesRequest body, ISender sender, CancellationToken ct) =>
         {

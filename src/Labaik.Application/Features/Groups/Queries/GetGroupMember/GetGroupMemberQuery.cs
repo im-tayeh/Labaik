@@ -1,30 +1,13 @@
 using Labaik.Application.Common.Interfaces;
+using Labaik.Application.Features.Companies.Common;
 using Labaik.Application.Features.Groups.Common;
 using Labaik.Domain.Common.Results;
 using Labaik.Domain.Groups;
-using Labaik.Domain.Groups.Enums;
-using Labaik.Domain.Profiles.Enums;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 
 namespace Labaik.Application.Features.Groups.Queries.GetGroupMember;
 
-// Supervisor-only member card. Contains HealthNotes (sensitive): never reuse this DTO in lists or
-// in anything a pilgrim or another member can read.
-public sealed record GroupMemberDetailsDto(
-    Guid UserId,
-    string? FullName,
-    string? Email,
-    GroupMemberRole Role,
-    int? MemberNumberInGroup,
-    Gender? Gender,
-    string? Nationality,
-    string? PhotoUrl,
-    string? HealthNotes,
-    string? Notes,
-    AttendanceStatus AttendanceStatus,
-    DateTimeOffset JoinedAtUtc);
-
+// Member card for the group's supervisor (GET /groups/{groupId}/members/{userId}).
 public sealed record GetGroupMemberQuery(Guid GroupId, Guid UserId) : IRequest<Result<GroupMemberDetailsDto>>;
 
 public sealed class GetGroupMemberQueryHandler(
@@ -50,19 +33,34 @@ public sealed class GetGroupMemberQueryHandler(
             return GroupErrors.NotLeader;
         }
 
-        var member = group.Members.FirstOrDefault(m => m.UserId == request.UserId);
-        if (member is null)
+        var card = await context.GetMemberDetailsAsync(group, request.UserId, userDirectory, cancellationToken);
+        return card is null ? GroupErrors.MemberNotFound : card;
+    }
+}
+
+// Member card for the company that owns the group (GET /company/groups/{groupId}/members/{userId}).
+public sealed record GetCompanyGroupMemberQuery(Guid GroupId, Guid UserId) : IRequest<Result<GroupMemberDetailsDto>>;
+
+public sealed class GetCompanyGroupMemberQueryHandler(
+    IAppDbContext context,
+    ICurrentUser currentUser,
+    IUserDirectory userDirectory) : IRequestHandler<GetCompanyGroupMemberQuery, Result<GroupMemberDetailsDto>>
+{
+    public async Task<Result<GroupMemberDetailsDto>> Handle(GetCompanyGroupMemberQuery request, CancellationToken cancellationToken)
+    {
+        var companyId = await context.GetMyCompanyIdAsync(currentUser, cancellationToken);
+        if (companyId.IsFailure)
         {
-            return GroupErrors.MemberNotFound;
+            return companyId.Error!;
         }
 
-        var contact = await userDirectory.GetContactAsync(member.UserId, cancellationToken);
-        var profile = await context.PilgrimProfiles.AsNoTracking()
-            .FirstOrDefaultAsync(p => p.UserId == member.UserId, cancellationToken);
+        var group = await context.GetCompanyGroupAsync(request.GroupId, companyId.Value, cancellationToken);
+        if (group is null)
+        {
+            return GroupErrors.NotFound;
+        }
 
-        return new GroupMemberDetailsDto(
-            member.UserId, contact?.FullName, contact?.Email, member.Role, member.MemberNumber,
-            profile?.Gender, profile?.Nationality, profile?.PhotoUrl, profile?.HealthNotes,
-            member.Notes, member.AttendanceStatus, member.JoinedAtUtc);
+        var card = await context.GetMemberDetailsAsync(group, request.UserId, userDirectory, cancellationToken);
+        return card is null ? GroupErrors.MemberNotFound : card;
     }
 }
