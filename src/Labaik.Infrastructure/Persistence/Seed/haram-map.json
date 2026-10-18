@@ -1,0 +1,162 @@
+{
+  "reviewStatus": "PendingReview",
+  "reviewNote": "Placeholder field-mode data. Gate numbers and coordinates are approximate and must be verified on site (or against an official Haram map) before production use. Images are supplied by the app until imageUrl is set.",
+  "places": [
+    {
+      "key": "gate-king-abdulaziz",
+      "type": "MainGate",
+      "name": "باب الملك عبدالعزيز",
+      "number": 1,
+      "description": "البوابة الرئيسية في الجهة الجنوبية للمسجد الحرام، مقابل أبراج البيت.",
+      "latitude": 21.42090,
+      "longitude": 39.82640,
+      "imageUrl": null
+    },
+    {
+      "key": "gate-king-fahd",
+      "type": "MainGate",
+      "name": "باب الملك فهد",
+      "number": 79,
+      "description": "البوابة الرئيسية في الجهة الغربية ضمن توسعة الملك فهد.",
+      "latitude": 21.42290,
+      "longitude": 39.82390,
+      "imageUrl": null
+    },
+    {
+      "key": "gate-umrah",
+      "type": "MainGate",
+      "name": "باب العمرة",
+      "number": 62,
+      "description": "بوابة رئيسية في الجهة الشمالية الغربية.",
+      "latitude": 21.42410,
+      "longitude": 39.82470,
+      "imageUrl": null
+    },
+    {
+      "key": "gate-al-fath",
+      "type": "MainGate",
+      "name": "باب الفتح",
+      "number": 45,
+      "description": "بوابة رئيسية في الجهة الشمالية قرب المسعى.",
+      "latitude": 21.42460,
+      "longitude": 39.82640,
+      "imageUrl": null
+    },
+    {
+      "key": "gate-king-abdullah",
+      "type": "MainGate",
+      "name": "باب الملك عبدالله",
+      "number": 100,
+      "description": "البوابة الرئيسية لتوسعة الملك عبدالله في الجهة الشمالية.",
+      "latitude": 21.42600,
+      "longitude": 39.82580,
+      "imageUrl": null
+    },
+    {
+      "key": "gate-al-salam",
+      "type": "MainGate",
+      "name": "باب السلام",
+      "number": 24,
+      "description": "بوابة في الجهة الشرقية قرب المروة.",
+      "latitude": 21.42370,
+      "longitude": 39.82760,
+      "imageUrl": null
+    },
+    {
+      "key": "gate-al-safa",
+      "type": "SubGate",
+      "name": "باب الصفا",
+      "number": 11,
+      "description": "باب فرعي قرب جبل الصفا وبداية المسعى.",
+      "latitude": 21.42200,
+      "longitude": 39.82780,
+      "imageUrl": null
+    },
+    {
+      "key": "gate-ajyad",
+      "type": "SubGate",
+      "name": "باب أجياد",
+      "number": 5,
+      "description": "باب فرعي في الجهة الجنوبية الشرقية من جهة أجياد.",
+      "latitude": 21.42120,
+      "longitude": 39.82710,
+      "imageUrl": null
+    },
+    {
+      "key": "gate-al-marwa",
+      "type": "SubGate",
+      "name": "باب المروة",
+      "number": null,
+      "description": "باب فرعي قرب المروة ونهاية المسعى.",
+      "latitude": 21.42500,
+      "longitude": 39.82750,
+      "imageUrl": null
+    },
+    {
+      "key": "facility-zamzam-mataf",
+      "type": "Facility",
+      "facilityKind": "ZamzamWater",
+      "name": "مياه زمزم - صحن المطاف",
+      "number": null,
+      "description": "حافظات مياه زمزم موزعة حول صحن المطاف وفي أروقة المسجد.",
+      "latitude": 21.42260,
+      "longitude": 39.82610,
+      "imageUrl": null
+    },
+    {
+      "key": "facility-restrooms-south",
+      "type": "Facility",
+      "facilityKind": "Restrooms",
+      "name": "دورات المياه - الساحة الجنوبية",
+      "number": null,
+      "description": "دورات مياه ومواضئ في الساحة الجنوبية قرب باب الملك عبدالعزيز.",
+      "latitude": 21.42030,
+      "longitude": 39.82610,
+      "imageUrl": null
+    },
+    {
+      "key": "facility-restrooms-north",
+      "type": "Facility",
+      "facilityKind": "Restrooms",
+      "name": "دورات المياه - الساحة الشمالية",
+      "number": null,
+      "description": "دورات مياه ومواضئ في الساحة الشمالية قرب باب الملك عبدالله.",
+      "latitude": 21.42660,
+      "longitude": 39.82560,
+      "imageUrl": null
+    },
+    {
+      "key": "facility-medical-center",
+      "type": "Facility",
+      "facilityKind": "Medical",
+      "name": "مركز الإسعاف والطوارئ",
+      "number": null,
+      "description": "نقطة إسعاف وطوارئ لخدمة القاصدين داخل المسجد الحرام.",
+      "latitude": 21.42180,
+      "longitude": 39.82520,
+      "imageUrl": null
+    },
+    {
+      "key": "facility-lost-and-found",
+      "type": "Facility",
+      "facilityKind": "LostAndFound",
+      "name": "مكتب المفقودات والتائهين",
+      "number": null,
+      "description": "مكتب استقبال المفقودات وإرشاد التائهين.",
+      "latitude": 21.42150,
+      "longitude": 39.82700,
+      "imageUrl": null
+    },
+    {
+      "key": "facility-wheelchairs",
+      "type": "Facility",
+      "facilityKind": "WheelchairService",
+      "name": "خدمة العربات",
+      "number": null,
+      "description": "استئجار العربات اليدوية والكهربائية للطواف والسعي.",
+      "latitude": 21.42320,
+      "longitude": 39.82420,
+      "imageUrl": null
+    }
+  ]
+}

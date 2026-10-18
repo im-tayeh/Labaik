@@ -117,6 +117,7 @@ try
         var seedLogger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Seed");
         await RitualStepSeeder.SeedAsync(dbContext, seedLogger);
         await GuideArticleSeeder.SeedAsync(dbContext, seedLogger);
+        await MapPlaceSeeder.SeedAsync(dbContext, seedLogger);
         await RoleSeeder.SeedAsync(scope.ServiceProvider, seedLogger);
     }
 
@@ -154,6 +155,7 @@ try
     app.MapProfileEndpoints();
     app.MapSupervisorEndpoints();
     app.MapTripEndpoints();
+    app.MapMapEndpoints();
     app.MapHub<LocationHub>(LocationHub.Path);
     app.MapHub<EventsHub>(EventsHub.Path);
 

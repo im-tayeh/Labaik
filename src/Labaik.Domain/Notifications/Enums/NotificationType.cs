@@ -12,6 +12,7 @@ public enum NotificationType
     GatheringPointChanged = 6,  // -> group members except the supervisor (preview = address)
     PilgrimArrived = 7,         // -> group supervisor (preview = pilgrim name)
     GroupMessagePosted = 8,     // -> group members except the sender, when a pilgrim writes in the group chat (preview = text)
-    SupervisorMessagePosted = 9 // -> group pilgrims, when the supervisor writes in the group chat (preview = text);
-                                //    reused for 1:1 supervisor messages once direct chat exists
+    SupervisorMessagePosted = 9, // -> group pilgrims, when the supervisor writes in the group chat (preview = text);
+                                 //    reused for 1:1 supervisor messages once direct chat exists
+    EmergencyReported = 10      // -> supervisors of the pilgrim's groups (referenceId = alert id, preview = pilgrim name)
 }
