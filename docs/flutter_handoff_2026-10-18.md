@@ -20,6 +20,9 @@
 | 8 | `ChatMessageDto.body` قد يكون نصاً فارغاً `""` في رسائل الموقع (`kind = 2`). | اعرضوا بطاقة الموقع بدل النص. |
 | 9 | `supervisorsCount` في `GET /company/home` صار عدد المشرفين في قائمة الشركة (معيّنين أو لا)، وليس عدد مشرفي المجموعات فقط. | لا شيء، الرقم يتغير فقط. |
 | 10 | `PUT /auth/account-type` غير موجود في الخادم ولن يُبنى. التسجيل العام للمعتمرين فقط. | احذفوا شاشة نوع الحساب واستدعاءها. |
+| 11 | مفاتيح `errors` في أخطاء 422 صارت camelCase بمسار JSON مثل جسم الطلب: `fullName` و`arrival.entryPoint` و`stays[0].placeName` (كانت `FullName`). | اربطوا أخطاء الحقول بأسماء camelCase. |
+
+إضافة مهمة غير كاسرة: كل خطأ عمل صار يحمل حقل `code` ثابتاً للآلة (مثل `Group.AlreadyMember`) بجانب `status` و`title` كما هما. التفاصيل في القسم 2.
 
 تغييرات إضافية غير كاسرة (حقول جديدة فقط): `HomeGroupDto.unreadMessages`، وحقول الدردشة `kind` و`latitude` و`longitude` و`senderPhotoUrl` و`isRead`، و`pilgrimageType` الاختياري في `PUT /journeys/{id}`، و`fullName` و`phoneNumber` الاختياريان في إضافة عضو، وحقول إضافية في `GET /company/me`.
 
@@ -53,35 +56,66 @@
 
 ### شكل الأخطاء (ProblemDetails, RFC 9457)
 
-كل خطأ يعود بهذا الشكل:
+خطأ قاعدة العمل يعود بهذا الشكل (`Content-Type: application/problem+json`):
 
 ```json
 {
-  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.2",
-  "title": "Unauthorized",
-  "status": 401,
-  "instance": "GET /api/v1/home",
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.10",
+  "title": "The user is already a member of this group.",
+  "status": 409,
+  "instance": "POST /api/v1/company/groups/7e8f9a0b-1c2d-4e3f-8a5b-6c7d8e9f0a1b/members",
+  "code": "Group.AlreadyMember",
   "traceId": "00-2895e5aa0d41af41437e965bf73a1eee-3a607953c8512a5f-00"
 }
 ```
 
-- لا يوجد حقل `code` آلي. اعتمدوا على `status`، والرسالة في `title` (بالإنجليزية، للتسجيل وليس للعرض). استثناء معروف: تسجيل الدخول بحساب غير مؤكد يعيد 403 و`title` يساوي حرفياً `email_not_confirmed`.
-- أخطاء شكل الطلب (FluentValidation) تعود 422 مع قاموس `errors`. **المفاتيح بأسماء الخصائص كما في C# (PascalCase)**، والعناصر المتداخلة بمسار مثل `Arrival.EntryPoint` أو `Stays[0].PlaceName`:
+- **`code`** ثابت للآلة بصيغة `Area.Reason`، وهو ما يجب أن يعتمد عليه التطبيق لاختيار الرسالة المترجمة. القائمة الكاملة أدناه. لن تتغير الرموز الموجودة، والجديد يُضاف فقط.
+- `title` رسالة إنجليزية للتسجيل وليست للعرض. استثناء تاريخي: الدخول بحساب غير مؤكد يعيد 403 مع `code = Auth.EmailNotConfirmed` و`title = email_not_confirmed`.
+- **ردود بلا `code`**: الـ 401 الذي يصدر عن طبقة المصادقة نفسها (توكن مفقود أو منتهٍ، `title = Unauthorized`)، والـ 403 من سياسة الدور (`title = Forbidden`)، والـ 500 (`An unexpected error occurred.`)، وأخطاء 422. عاملوها حسب `status`.
+- أخطاء شكل الطلب (FluentValidation) تعود 422 مع قاموس `errors` بلا `code`. **المفاتيح camelCase بمسار JSON مثل جسم الطلب**: `fullName`، و`arrival.entryPoint`، و`stays[0].placeName`، و`days[1].activities[0].title`. الاستثناء الوحيد `destination` في `GET /map/route` (عند غياب `destinationId` و`toLat`/`toLng` معاً).
 
 ```json
 {
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.21",
   "title": "One or more validation errors occurred.",
   "status": 422,
   "instance": "POST /api/v1/auth/register",
   "errors": {
-    "Email": ["'Email' is not a valid email address."],
-    "Password": ["The length of 'Password' must be at least 8 characters. You entered 5 characters."]
+    "email": ["'Email' is not a valid email address."],
+    "password": ["The length of 'Password' must be at least 8 characters. You entered 5 characters."]
   },
   "traceId": "00-..."
 }
 ```
 
 - `traceId` يربط الخطأ بسجلات الخادم. أرسلوه مع أي بلاغ خطأ.
+- أخطاء SignalR تصل كـ `HubException` برسالة تبدأ بنفس الرمز، مثل `Location.SharingDisabled: ...`.
+
+### رموز الأخطاء (`code`)
+
+الرقم بين القوسين هو `status`. الرموز من نوع Validation و Failure كلاهما 400.
+
+| العائلة | الرموز |
+| --- | --- |
+| `Auth` | `Auth.InvalidCredentials` (401)، `Auth.EmailNotConfirmed` (403)، `Auth.InvalidRefreshToken` (401)، `Auth.InvalidGoogleToken` (401)، `Auth.ExternalEmailNotVerified` (401)، `Auth.GoogleNotConfigured` (400)، `Auth.ExternalLinkFailed` (400)، `Auth.ResetFailed` (400)، `Auth.Required` (401) |
+| `Otp` | `Otp.Invalid` (400)، `Otp.Expired` (400)، `Otp.NotFound` (400)، `Otp.TooManyAttempts` (400)، `Otp.Throttled` (429) |
+| `User` | `User.EmailTaken` (409)، `User.NotFound` (404)، `User.CreationFailed` (400)، `User.RoleChangeFailed` (400) |
+| `Company` | `Company.NotFound` (404)، `Company.SupervisorNotFound` (404)، `Company.OwnerAlreadyHasCompany` (409)، `Company.RegistrationNumberTaken` (409)، `Company.SupervisorAlreadyAdded` (409)، `Company.OwnerCannotBeSupervisor` (409)، `Company.NameRequired`، `Company.NameTooLong`، `Company.RegistrationNumberRequired`، `Company.ContactNameRequired`، `Company.TooLong`، `Company.InvalidUrl`، `Company.NegativeNumber`، `Company.ContractEndBeforeStart`، `Company.OwnerRequired`، `Company.SupervisorRequired` (كلها 400) |
+| `Trip` | `Trip.NotFound` (404)، `Trip.CannotEditItinerary` (403)، `Trip.NameRequired`، `Trip.DeparturePlaceRequired`، `Trip.DestinationsRequired`، `Trip.InvalidDestination`، `Trip.TooLong`، `Trip.ReturnBeforeDeparture`، `Trip.InvalidExpectedPilgrims`، `Trip.CompanyRequired`، `Trip.ItineraryTooLarge`، `Trip.DuplicateItineraryDay`، `Trip.ItineraryDayOutsideTrip`، `Trip.InvalidActivity` (كلها 400) |
+| `Group` | `Group.NotFound` (404)، `Group.MemberNotFound` (404)، `Group.NotLeader` (403)، `Group.NotPilgrim` (403)، `Group.AlreadyMember` (409)، `Group.CannotRemoveSupervisor` (409)، `Group.NameRequired`، `Group.NameTooLong`، `Group.JoinCodeRequired`، `Group.LeaderRequired`، `Group.TripRequired`، `Group.AddressRequired`، `Group.AddressTooLong`، `Group.InvalidCoordinates`، `Group.InvalidAttendanceStatus`، `Group.NotesTooLong` (كلها 400) |
+| `Announcement` | `Announcement.NotFound` (404)، `Announcement.NotCompanyOwner` (403)، `Announcement.TitleRequired`، `Announcement.TitleTooLong`، `Announcement.BodyRequired`، `Announcement.BodyTooLong`، `Announcement.InvalidImportance`، `Announcement.LocationTooLong`، `Announcement.InvalidImageUrl` (كلها 400) |
+| `Chat` | `Chat.NotMember` (403)، `Chat.BodyRequired`، `Chat.BodyTooLong`، `Chat.InvalidLocation`، `Chat.InvalidKind` (كلها 400) |
+| `Notification` | `Notification.NotFound` (404)، `Notification.UserRequired` (400) |
+| `Location` | `Location.SharingDisabled` (409)، `Location.InvalidLatitude`، `Location.InvalidLongitude`، `Location.InvalidAccuracy`، `Location.UserRequired` (كلها 400) |
+| `Map` | `Map.PlaceNotFound` (404)، `Map.EmergencyNotFound` (404)، `Map.InvalidCoordinates`، `Map.NoteTooLong`، `Map.UserRequired`، `Map.InvalidKey`، `Map.InvalidContent`، `Map.FacilityKindMismatch` (كلها 400) |
+| `LostChild` | `LostChild.NotFound` (404)، `LostChild.NotReporter` (403)، `LostChild.InvalidAge`، `LostChild.DescriptionRequired`، `LostChild.TooLong`، `LostChild.InvalidPhotoUrl`، `LostChild.ReporterRequired` (كلها 400) |
+| `FamilyCircle` | `FamilyCircle.NotFound` (404)، `FamilyCircle.MemberNotFound` (404)، `FamilyCircle.NotOwner` (403)، `FamilyCircle.AlreadyMember` (409)، `FamilyCircle.Full` (409)، `FamilyCircle.OwnerCannotLeave` (409)، `FamilyCircle.NameRequired`، `FamilyCircle.NameTooLong`، `FamilyCircle.JoinCodeRequired`، `FamilyCircle.UserRequired` (كلها 400) |
+| `Journey` | `Journey.NotFound` (404)، `Journey.NotEditable` (409)، `Journey.InvalidTransition` (409)، `Journey.InvalidPilgrimageType`، `Journey.EntryPointRequired`، `Journey.PlaceNameRequired`، `Journey.CityRequired`، `Journey.ArrivalPlanRequired`، `Journey.StayRequired`، `Journey.UserRequired` (كلها 400) |
+| `Ritual` | `Ritual.NoSteps` (404)، `Ritual.StepNotFound` (404)، `Ritual.StepOutOfOrder` (409)، `Ritual.AlreadyCompleted` (409)، `Ritual.TitleRequired`، `Ritual.BodyRequired`، `Ritual.InvalidOrder`، `Ritual.UserRequired` (كلها 400) |
+| `Guide` | `Guide.NotFound` (404)، `Guide.TitleRequired`، `Guide.BodyRequired`، `Guide.InvalidOrder` (كلها 400) |
+| `Profile` | `Profile.InvalidGender`، `Profile.InvalidNationality`، `Profile.InvalidPhotoUrl`، `Profile.HealthNotesTooLong`، `Profile.UserRequired` (كلها 400) |
+
+معظم رموز 400 تسبقها فحوص 422 على شكل الطلب، فلن تظهر إلا نادراً. الرموز التي يحتاج التطبيق التعامل معها فعلياً هي غالباً 401 و403 و404 و409 و429 أعلاه.
 
 ### رموز الحالة
 
@@ -545,7 +579,7 @@ FamilyMemberLocationDto { userId, fullName?, isSharing, latitude?, longitude?, a
 - [ ] مركز المساعدة: `GET /pilgrim/supervisor` وبلاغ الطفل المفقود.
 - [ ] دائرة العائلة: استبدلوا البيانات التجريبية على الجهاز بمسارات `/family-circles`.
 - [ ] الرحلة الشخصية: يمكن الآن إرسال `pilgrimageType` في `PUT /journeys/{id}`.
-- [ ] الأخطاء: اعرضوا رسائلكم المترجمة حسب `status`، واستخدموا مفاتيح `errors` بصيغة PascalCase لربط أخطاء 422 بالحقول.
+- [ ] الأخطاء: اختاروا الرسالة المترجمة حسب `code` (وحسب `status` عندما لا يوجد `code`)، واربطوا أخطاء 422 بالحقول عبر مفاتيح `errors` بصيغة camelCase.
 
 ### حقول تبقى في Flutter (لا مكان لها في الخادم)
 
