@@ -42,6 +42,7 @@ public sealed class LabaikApiFactory : WebApplicationFactory<Program>, IAsyncLif
         builder.UseSetting("jwt:SigningKey", "integration-tests-signing-key-at-least-32-bytes-long!");
         builder.UseSetting("Email:Provider", "Logging");
         builder.UseSetting("Admin:Emails:0", AdminEmail);
+        builder.UseSetting("OpenApi:Enabled", "true");
 
         builder.ConfigureTestServices(services =>
         {

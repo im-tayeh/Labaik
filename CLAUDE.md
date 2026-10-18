@@ -134,6 +134,14 @@ No `Contracts` or `Client` project — backend only.
   `email_not_confirmed`** when unverified; re-registering an unconfirmed email
   resends a fresh code (not 409).
 - `ICurrentUser` reads `sub` from the JWT via `IHttpContextAccessor`.
+- **Public signup/login is for pilgrims only** (no role = pilgrim). There is no account-type
+  endpoint. Elevated accounts are **provisioned top-down** via
+  `IIdentityService.ProvisionAccountAsync`: admin -> company owner (`POST /admin/companies`),
+  company -> supervisor (`POST /company/supervisors`), company -> new pilgrim
+  (`POST /company/groups/{id}/members` with an unknown email). A new email gets a confirmed
+  account (no OTP) + temporary password emailed by `AccountEmails`; a confirmed existing account
+  is linked as is (notice email, no password); an unconfirmed existing account is taken over with
+  a temporary password. With `Email:Provider=Logging` the temporary password is only in the logs.
 
 ---
 
@@ -240,7 +248,7 @@ Work the Backlog top-down without waiting for per-task orders:
 3. **Company view** — the شركة experience (manages its trips/groups/members).
 4. **Admin Dashboard** — a **separate web client** for platform operators/developers. This is where **company accounts are created** and the platform is managed (backend = the `/admin/*` area).
 
-The mobile app **does keep an account-type selection screen** (`PUT /auth/account-type` stays). What it does NOT do is self-create company accounts — those come only from the admin dashboard.
+**Scope change (18 Oct 2026, demo):** there is **no account-type selection flow** (`PUT /auth/account-type` never existed server-side; the Flutter screen must go). Public signup is pilgrim-only; company, supervisor and company-added pilgrim accounts are provisioned top-down (see §6).
 
 #### Architectural shift (read first)
 
@@ -285,6 +293,7 @@ in T13 is the core of it. Build the rest of F after A if time is tight.
 - `POST /admin/companies` (name + owner email) — Admin only.
 - `GET /company/me` -> `{ id, name }` (welcome header).
 - _Done:_ `Company` aggregate (`Name`, `OwnerUserId` unique, `CreatedAtUtc`, `CompanyCreated` event); role `Company` + policy `Company`; `POST /admin/companies` links an **existing** account by email (404 if not registered, 409 if it already owns one) and grants the role (effective after refresh); `GET /company/me`; `CompanyDataAccess.GetMyCompanyIdAsync` resolves "my company" for all company endpoints; migration `AddCompanies`.
+- _Updated (18 Oct 2026):_ `Company` stores the full admin form (registration number required + unique, category, contacts, contract/subscription fields, limits, file/logo URLs, `EnabledServices` flags; billing/limits/flags **not enforced**), computed `Status` (1 Active / 2 Stopped / 3 Expired) + `DaysRemaining`; `POST /admin/companies` **provisions** the owner (new email -> temporary password; registered -> linked); `PUT /company/me` edits the company's subset; `GET /company/me` gains those fields (additive). Migration `ExpandCompanyProfile`.
 
 **T14 — Company trips**
 - Domain: `Trip` aggregate owned by `Company`: `Name`, `PilgrimageType`, `Destinations`, `DepartureDate`, `ReturnDate?`, `DeparturePlace`, `ExpectedPilgrims`, `Notes?`; computed `TripStatus` (1 Upcoming / 2 Departed).
@@ -297,10 +306,11 @@ in T13 is the core of it. Build the rest of F after A if time is tight.
 - `POST /company/groups/{groupId}/members`, `DELETE /company/groups/{groupId}/members/{userId}`
 - `PUT /company/groups/{groupId}/supervisor` (grants `Supervisor` role).
 - _Done:_ `Group` gains nullable `CompanyId`/`TripId` (FKs) and `LeaderId` is now **nullable** (company groups start with no supervisor); `Group.CreateForTrip`, `AssignSupervisor` (replaces + removes the previous supervisor, promotes an existing member, idempotent, `SupervisorAssigned` event), `AddMember`, `RemoveMember` (supervisor can't be removed -> 409); members/supervisor are added **by email of an existing account**; extra `GET /company/trips/{tripId}/groups` (company needs to list group ids); `POST /groups` and `POST /groups/{code}/join` are now **Admin-only** (locked decision 2); `GenerateUniqueJoinCodeAsync` shared; migration `AddCompanyManagedGroups`.
+- _Updated (18 Oct 2026):_ supervisors come from a **company roster** (`Company.Supervisors`, `POST/GET /company/supervisors`, provisioned with a temporary password); `PUT .../supervisor` accepts **roster supervisors only** (404 otherwise). `POST .../members` with an unknown email **creates a pilgrim account** (optional `fullName`, `phoneNumber`). Migration `AddCompanySupervisorRoster` (backfills current group supervisors).
 
 **T16 — Company dashboard numbers**
 - `GET /company/home` -> `{ activeTrips, pilgrimsCount, supervisorsCount, groupsCount }`.
-- _Done:_ read-only `GetCompanyHomeQuery` (no migration). Definitions: `activeTrips` = trips with no return date or returning today or later (UTC); `pilgrimsCount`/`supervisorsCount` = **distinct** people across all the company's groups; `groupsCount` = all its groups.
+- _Done:_ read-only `GetCompanyHomeQuery` (no migration). Definitions: `activeTrips` = trips with no return date or returning today or later (UTC); `pilgrimsCount` = **distinct** pilgrims across all the company's groups; `supervisorsCount` = **roster size** (changed 18 Oct 2026); `groupsCount` = all its groups.
 
 **T17 — Company notifications (new enum values)**
 - Add to `NotificationType` (next numbers, do not renumber): `3 GroupCreated`, `4 SupervisorActivated`, `5 GroupWithoutSupervisor`. Recipient: company account; broadcast via `/hubs/events` `NotificationReceived`.
@@ -383,13 +393,14 @@ in T13 is the core of it. Build the rest of F after A if time is tight.
 - `PUT /admin/companies/{id}` (edit), optional `POST /admin/companies/{id}/deactivate`.
 - `GET /admin/overview` — platform-wide numbers (companies, trips, pilgrims, supervisors) for the dashboard home.
 - Reuse the existing `GET/PUT/DELETE /admin/users/{id}/supervisor` endpoints.
+- _Done (18 Oct 2026, Figma owner dashboard):_ `GET /admin/companies` (rows: id, name, logoUrl, activePilgrims, subscriptionStartUtc/EndUtc, status, daysRemaining), `GET|PUT /admin/companies/{id}` (all form fields + owner + stats), `POST /admin/companies/{id}/stop|resume` (instead of "deactivate"), `GET /admin/overview` (pendingRequests = 0 until sign-up requests exist, activeSubscriptions, subscriptionsExpiringIn30Days, activePilgrims, activeCompanies, totalCompanies). "Active pilgrim" = in a company group whose trip is not over. All admin + company endpoints carry OpenAPI request/response examples (`Labaik.Api/OpenApi/*Examples.cs`); the doc is served outside Development when `OpenApi__Enabled=true`. **Open:** `CompanyCategory` values (1 Umrah / 2 Hajj / 3 HajjAndUmrah) are a guess pending the Figma dropdown.
 - The dashboard itself is a separate web frontend; the backend only exposes this area.
 
 ---
 
 #### Decisions locked in (flip if you disagree)
 
-1. "Account type" screen + `PUT /auth/account-type`: **kept**. Company accounts are created only from the admin dashboard, never self-registered.
+1. "Account type" screen + `PUT /auth/account-type`: **removed** (18 Oct 2026). Company accounts are created only from the admin dashboard, supervisors only by their company; never self-registered.
 2. `POST /groups` + join: **kept Admin-only**, not deleted.
 3. Multiple groups per supervisor: **yes** (T22).
 4. `pilgrimageType` editable in `PUT`: **yes**.
@@ -456,6 +467,16 @@ in T13 is the core of it. Build the rest of F after A if time is tight.
 ---
 
 ## 12. Security Note
+
+### Production TODO (before real users)
+- **Provisioned accounts get a plaintext temporary password by email and are not forced to change
+  it.** Today users change it via forgot/reset password. Before production, add a forced password
+  change on first login (e.g. a `MustChangePassword` flag returned at login + an endpoint to set the
+  new password) and consider an expiring set-password link instead of emailing a password.
+- With `Email:Provider=Logging` the temporary password is written to the logs (demo fallback only);
+  production must use `Brevo` with the API key in Render env vars.
+
+### Exposed key
 
 A Brevo API key was shared earlier in a chat (now exposed). Before relying on it in
 production, **regenerate it in Brevo**, store it only in user-secrets / Render env

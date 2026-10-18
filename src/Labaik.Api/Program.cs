@@ -127,7 +127,9 @@ try
     app.UseStatusCodePages();    // turns bare 404/401 into ProblemDetails too
 
 
-    if (app.Environment.IsDevelopment())
+    // Always in Development; elsewhere opt-in (env OpenApi__Enabled=true) so the dashboard team can
+    // read /openapi/v1.json and Scalar from a deployed instance. Endpoints stay protected by auth.
+    if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("OpenApi:Enabled"))
     {
         app.MapOpenApi().WithDocumentPerVersion();
         app.MapScalarApiReference();
