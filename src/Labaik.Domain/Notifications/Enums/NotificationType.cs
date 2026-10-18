@@ -10,5 +10,8 @@ public enum NotificationType
     SupervisorActivated = 4,    // -> company owner (a supervisor was assigned to a group)
     GroupWithoutSupervisor = 5, // -> company owner (first pilgrim added to a group with no supervisor)
     GatheringPointChanged = 6,  // -> group members except the supervisor (preview = address)
-    PilgrimArrived = 7          // -> group supervisor (preview = pilgrim name)
+    PilgrimArrived = 7,         // -> group supervisor (preview = pilgrim name)
+    GroupMessagePosted = 8,     // -> group members except the sender, when a pilgrim writes in the group chat (preview = text)
+    SupervisorMessagePosted = 9 // -> group pilgrims, when the supervisor writes in the group chat (preview = text);
+                                //    reused for 1:1 supervisor messages once direct chat exists
 }

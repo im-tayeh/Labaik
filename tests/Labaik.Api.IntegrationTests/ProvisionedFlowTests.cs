@@ -83,13 +83,18 @@ public class ProvisionedFlowTests(LabaikApiFactory factory)
         Assert.Equal(HttpStatusCode.NotFound, (await company.Client.GetAsync($"/api/v1/groups/{groupId}/messages")).StatusCode);
 
         // Notifications for each role.
-        Assert.Equal(2, (await NotificationTypesAsync(pilgrim)).Count(t => t == 1));           // both announcements
-        Assert.Contains(2, await NotificationTypesAsync(supervisor));                           // pilgrim joined
+        var pilgrimTypes = await NotificationTypesAsync(pilgrim);
+        Assert.Equal(2, pilgrimTypes.Count(t => t == 1));                                       // both announcements
+        Assert.Equal(1, pilgrimTypes.Count(t => t == 9));                                       // supervisor's chat message
+        Assert.DoesNotContain(8, pilgrimTypes);                                                 // not for own message
+        var supervisorTypes = await NotificationTypesAsync(supervisor);
+        Assert.Contains(2, supervisorTypes);                                                    // pilgrim joined
+        Assert.Contains(8, supervisorTypes);                                                    // pilgrim's chat message
         var companyTypes = await NotificationTypesAsync(company);
         Assert.Contains(3, companyTypes);                                                       // group created
         Assert.Contains(4, companyTypes);                                                       // supervisor activated
         var unread = await pilgrim.Client.GetFromJsonAsync<JsonElement>("/api/v1/notifications/unread-count");
-        Assert.Equal(2, unread.GetProperty("count").GetInt32());
+        Assert.Equal(3, unread.GetProperty("count").GetInt32());
 
         // Dashboards reflect the new accounts.
         var companyHome = await company.Client.GetFromJsonAsync<JsonElement>("/api/v1/company/home");
