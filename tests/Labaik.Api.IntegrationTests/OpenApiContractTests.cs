@@ -76,7 +76,7 @@ public class OpenApiContractTests(LabaikApiFactory factory)
             Assert.Equal("integer", schema["type"]!.GetValue<string>());
         }
 
-        Assert.Equal([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        Assert.Equal([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
             schemas["NotificationType"]!["enum"]!.AsArray().Select(v => v!.GetValue<int>()));
         Assert.NotNull(schemas["ProblemDetails"]!["properties"]!["code"]);
         Assert.NotNull(schemas["HttpValidationProblemDetails"]!["properties"]!["errors"]);

@@ -29,6 +29,11 @@ public static class TestUsers
     public static async Task<TestUser> ToUserAsync(LabaikApiFactory factory, string email, HttpResponseMessage tokensResponse)
     {
         var json = await tokensResponse.Content.ReadFromJsonAsync<JsonElement>();
+        return ToUser(factory, email, json);
+    }
+
+    private static TestUser ToUser(LabaikApiFactory factory, string email, JsonElement json)
+    {
         var accessToken = json.GetProperty("accessToken").GetString()!;
         var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
@@ -89,8 +94,8 @@ public static class TestUsers
             login = await anonymous.PostAsJsonAsync("/api/v1/auth/login", new { email, password });
         }
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);
-        var user = await ToUserAsync(factory, email, login);
         var tokens = await login.Content.ReadFromJsonAsync<JsonElement>();
+        var user = ToUser(factory, email, tokens);
         if (completeRequiredPasswordChange && tokens.GetProperty("mustChangePassword").GetBoolean())
         {
             var changed = await user.Client.PostAsJsonAsync("/api/v1/auth/change-password",
