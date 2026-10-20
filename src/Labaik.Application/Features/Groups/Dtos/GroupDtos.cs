@@ -7,4 +7,6 @@ public sealed record GroupMemberDto(Guid UserId, GroupMemberRole Role, DateTimeO
 public sealed record GroupDto(Guid Id, string Name, string JoinCode, Guid? LeaderId, IReadOnlyList<GroupMemberDto> Members);
 
 // For the "confirm group" preview screen.
-public sealed record GroupSummaryDto(Guid Id, string Name, string? LeaderName, int MemberCount);
+public sealed record GroupSummaryDto(
+    Guid Id, string Name, string? LeaderName, int MemberCount,
+    DateOnly? TripDate = null, string? CompanyName = null, string? LeaderPhotoUrl = null);

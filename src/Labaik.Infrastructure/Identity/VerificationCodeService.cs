@@ -15,7 +15,7 @@ internal sealed class VerificationCodeService(
     TimeProvider timeProvider) : IVerificationCodeService
 {
     private static readonly TimeSpan ResendCooldown = TimeSpan.FromSeconds(55);
-    private static readonly TimeSpan CodeLifetime = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan CodeLifetime = TimeSpan.FromMinutes(15);
     private const int MaxAttempts = 5;
 
     public async Task<Result> GenerateAndSendAsync(
@@ -47,7 +47,7 @@ internal sealed class VerificationCodeService(
 
         await emailSender.SendAsync(
             email, "Your Labaik verification code",
-            $"Your verification code is: {newCode}. It expires in 10 minutes.", cancellationToken);
+            $"Your verification code is: {newCode}. It expires in {CodeLifetime.TotalMinutes:0} minutes.", cancellationToken);
 
         return Result.Success();
     }
@@ -64,7 +64,7 @@ internal sealed class VerificationCodeService(
 
         if (verificationCode is null)
         {
-            return Result.Failure(Error.Failure("Otp.NotFound", "No active verification code was found."));
+            return Result.Failure(Error.Failure("Otp.Expired", "The verification code has expired. Request a new one."));
         }
 
         if (verificationCode.IsExpired(now))

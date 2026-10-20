@@ -10,6 +10,7 @@ using Labaik.Domain.Groups;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Labaik.Application.Features.Groups.Commands.AddGroupMember;
 
@@ -38,6 +39,7 @@ public sealed class AddGroupMemberCommandHandler(
     IIdentityService identityService,
     IUserDirectory userDirectory,
     IEmailSender emailSender,
+    IOptions<AppLinksSettings> appLinks,
     TimeProvider timeProvider,
     ILogger<AddGroupMemberCommandHandler> logger) : IRequestHandler<AddGroupMemberCommand, Result<CompanyGroupDto>>
 {
@@ -55,32 +57,8 @@ public sealed class AddGroupMemberCommandHandler(
             return GroupErrors.NotFound;
         }
 
-        var email = request.Email.Trim();
-        var fullName = string.IsNullOrWhiteSpace(request.FullName) ? email : request.FullName;
-        var account = await identityService.ProvisionAccountAsync(fullName, email, request.PhoneNumber, role: null, cancellationToken);
-        if (account.IsFailure)
-        {
-            return account.Error!;
-        }
-
-        var add = group.AddMember(account.Value.Id, timeProvider.GetUtcNow());
-        if (add.IsFailure)
-        {
-            return add.Error!;
-        }
-
-        await context.SaveChangesAsync(cancellationToken); // MemberJoinedGroup -> supervisor notification
-
-        if (account.Value.IsNew)
-        {
-            var companyName = await context.Companies
-                .Where(c => c.Id == companyId.Value)
-                .Select(c => c.Name)
-                .FirstAsync(cancellationToken);
-            await emailSender.TrySendAsync(account.Value.Email,
-                AccountEmails.For(account.Value, "pilgrim", companyName), logger, cancellationToken);
-        }
-
-        return await group.ToCompanyDtoAsync(userDirectory, cancellationToken);
+        return await GroupMembership.AddByEmailAsync(group, request.Email, request.FullName, request.PhoneNumber,
+            addedBySupervisorId: null, context, identityService, userDirectory, emailSender, appLinks,
+            timeProvider, logger, cancellationToken);
     }
 }

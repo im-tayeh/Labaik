@@ -69,6 +69,33 @@ public sealed class GroupAwaitingSupervisorHandler(
     }
 }
 
+public sealed class MemberAddedBySupervisorHandler(
+    IAppDbContext context, IUserDirectory userDirectory, IRealtimeNotifier notifier, TimeProvider timeProvider)
+    : INotificationHandler<DomainEventNotification<MemberJoinedGroup>>
+{
+    public async Task Handle(DomainEventNotification<MemberJoinedGroup> notification, CancellationToken cancellationToken)
+    {
+        var e = notification.DomainEvent;
+        if (e.CompanyId is not { } companyId || e.AddedBySupervisorId is null) return;
+        await CompanyNotifier.NotifyOwnerAsync(context, notifier, companyId, NotificationType.MemberAddedBySupervisor,
+            e.GroupId, e.UserId, await userDirectory.GetFullNameAsync(e.UserId, cancellationToken),
+            timeProvider.GetUtcNow(), cancellationToken);
+    }
+}
+
+public sealed class MemberRemovedBySupervisorHandler(
+    IAppDbContext context, IUserDirectory userDirectory, IRealtimeNotifier notifier, TimeProvider timeProvider)
+    : INotificationHandler<DomainEventNotification<MemberRemovedFromGroup>>
+{
+    public async Task Handle(DomainEventNotification<MemberRemovedFromGroup> notification, CancellationToken cancellationToken)
+    {
+        var e = notification.DomainEvent;
+        await CompanyNotifier.NotifyOwnerAsync(context, notifier, e.CompanyId, NotificationType.MemberRemovedBySupervisor,
+            e.GroupId, e.UserId, await userDirectory.GetFullNameAsync(e.UserId, cancellationToken),
+            timeProvider.GetUtcNow(), cancellationToken);
+    }
+}
+
 internal static class CompanyNotifier
 {
     public static async Task NotifyOwnerAsync(

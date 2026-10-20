@@ -76,13 +76,30 @@ public static class TestUsers
     }
 
     // Signs in a provisioned account with the temporary password from its email.
-    public static async Task<TestUser> SignInProvisionedAsync(LabaikApiFactory factory, string email)
+    public static async Task<TestUser> SignInProvisionedAsync(
+        LabaikApiFactory factory, string email, bool completeRequiredPasswordChange = true)
     {
         var password = factory.Emails.TemporaryPasswordFor(email)
             ?? throw new InvalidOperationException($"No temporary password was emailed to {email}.");
-        var login = await factory.CreateClient().PostAsJsonAsync("/api/v1/auth/login", new { email, password });
+        var anonymous = factory.CreateClient();
+        var login = await anonymous.PostAsJsonAsync("/api/v1/auth/login", new { email, password });
+        if (login.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            password = Password;
+            login = await anonymous.PostAsJsonAsync("/api/v1/auth/login", new { email, password });
+        }
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);
-        return await ToUserAsync(factory, email, login);
+        var user = await ToUserAsync(factory, email, login);
+        var tokens = await login.Content.ReadFromJsonAsync<JsonElement>();
+        if (completeRequiredPasswordChange && tokens.GetProperty("mustChangePassword").GetBoolean())
+        {
+            var changed = await user.Client.PostAsJsonAsync("/api/v1/auth/change-password",
+                new { currentPassword = password, newPassword = Password });
+            Assert.Equal(HttpStatusCode.OK, changed.StatusCode);
+            user = await ToUserAsync(factory, email, changed);
+        }
+
+        return user;
     }
 
     // Puts a registered account on the company's supervisor roster (linked, no new password).
@@ -102,13 +119,7 @@ public static class TestUsers
         ownerEmail
     };
 
-    public static async Task<TestUser> GetAdminAsync(LabaikApiFactory factory)
-    {
-        var login = await factory.CreateClient().PostAsJsonAsync("/api/v1/auth/login",
-            new { email = LabaikApiFactory.AdminEmail, password = Password });
-
-        return login.StatusCode == HttpStatusCode.OK
-            ? await ToUserAsync(factory, LabaikApiFactory.AdminEmail, login)
-            : await CreateAsync(factory, LabaikApiFactory.AdminEmail, "Test Admin");
-    }
+    // The Admin:Emails account is seeded at startup; its temporary password arrives by email.
+    public static Task<TestUser> GetAdminAsync(LabaikApiFactory factory)
+        => SignInProvisionedAsync(factory, LabaikApiFactory.AdminEmail);
 }

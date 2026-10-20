@@ -25,6 +25,7 @@ internal sealed class GlobalExceptionHandler(
             Title = "An unexpected error occurred.",
             Type = "https://tools.ietf.org/html/rfc9110#section-15.6.1"
         };
+        problemDetails.Extensions["code"] = "Server.Error";
 
         if (environment.IsDevelopment())
         {

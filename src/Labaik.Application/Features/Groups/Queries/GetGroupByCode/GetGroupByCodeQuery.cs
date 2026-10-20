@@ -1,5 +1,6 @@
 ﻿using Labaik.Application.Common.Interfaces;
 using Labaik.Application.Features.Groups.Dtos;
+using Labaik.Application.Features.Groups.Common;
 using Labaik.Domain.Common.Results;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -26,9 +27,6 @@ public sealed class GetGroupByCodeQueryHandler(
             return Error.NotFound("Group.NotFound", "No group found for this code.");
         }
 
-        var leaderName = group.LeaderId is { } leaderId
-            ? await userDirectory.GetFullNameAsync(leaderId, cancellationToken)
-            : null;
-        return new GroupSummaryDto(group.Id, group.Name, leaderName, group.MemberCount);
+        return await GroupSummaryBuilder.BuildAsync(context, userDirectory, group, cancellationToken);
     }
 }

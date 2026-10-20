@@ -42,6 +42,7 @@ public sealed class Company : AggregateRoot
 
     // Suspended by an admin (status Stopped regardless of the contract dates).
     public bool IsStopped { get; private set; }
+    public DateTimeOffset? DeletedAtUtc { get; private set; }
 
     // Supervisor roster (accounts the company provisioned or linked).
     private readonly List<CompanySupervisor> _supervisors = [];
@@ -193,6 +194,8 @@ public sealed class Company : AggregateRoot
     public void Stop() => IsStopped = true;
 
     public void Resume() => IsStopped = false;
+
+    public void Delete(DateTimeOffset nowUtc) => DeletedAtUtc ??= nowUtc;
 
     public CompanyStatus StatusOn(DateOnly todayUtc) => StatusOf(IsStopped, ContractEndDate, todayUtc);
 

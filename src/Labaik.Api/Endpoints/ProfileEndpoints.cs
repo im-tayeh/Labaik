@@ -3,6 +3,7 @@ using Asp.Versioning.Builder;
 using Labaik.Api.Extensions;
 using Labaik.Api.OpenApi;
 using Labaik.Application.Features.Profiles;
+using Labaik.Application.Features.Profiles.Budget;
 using MediatR;
 
 namespace Labaik.Api.Endpoints;
@@ -37,6 +38,24 @@ public static class ProfileEndpoints
         .WithName("UpdateMyProfile")
         .WithSummary("Replace my profile (null clears a field)")
         .Returns<MyProfileDto>().Fails(400, 401).Validates();
+
+        group.MapGet("/budget", async (ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new GetMyBudgetQuery(), ct);
+            return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
+        })
+        .WithName("GetMyBudget")
+        .WithSummary("Get my locally synchronized budget and expenses")
+        .Returns<BudgetDto>().Fails(401);
+
+        group.MapPut("/budget", async (ReplaceMyBudgetCommand command, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(command, ct);
+            return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
+        })
+        .WithName("ReplaceMyBudget")
+        .WithSummary("Replace my complete budget and expense list")
+        .Returns<BudgetDto>().Fails(400, 401).Validates();
 
         return app;
     }

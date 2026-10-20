@@ -13,7 +13,11 @@ public sealed record CompanyDto(
     string? City,
     string? OfficialEmail,
     string? PrimaryPhone,
-    string ContactFullName);
+    string ContactFullName,
+    CompanyStatus Status = CompanyStatus.Active,
+    DateOnly? SubscriptionEndUtc = null,
+    CompanyServicesDto? EnabledServices = null,
+    string? SupportEmail = null);
 
 // A supervisor on the company's roster. GroupsCount = the company's groups they currently supervise.
 public sealed record CompanySupervisorDto(
@@ -77,7 +81,10 @@ public sealed record AdminCompanyDto(
     bool IsStopped,
     CompanyStatus Status,
     int? DaysRemaining,
-    AdminCompanyStatsDto Stats);
+    AdminCompanyStatsDto Stats)
+{
+    public string? TemporaryPassword { get; init; }
+}
 
 // Admin dashboard companies table row.
 public sealed record AdminCompanyListItemDto(

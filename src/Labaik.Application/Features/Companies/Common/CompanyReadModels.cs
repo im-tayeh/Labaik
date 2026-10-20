@@ -76,7 +76,8 @@ internal static class CompanyReadModels
             c.IsStopped, c.StatusOn(todayUtc), c.DaysRemainingOn(todayUtc), stats);
     }
 
-    public static CompanyDto ToDto(this Company c) => new(
+    public static CompanyDto ToDto(this Company c, DateOnly todayUtc, string? supportEmail = null) => new(
         c.Id, c.Name, c.LogoUrl, c.CommercialRegistrationNumber, c.Country, c.City,
-        c.OfficialEmail, c.PrimaryPhone, c.ContactFullName);
+        c.OfficialEmail, c.PrimaryPhone, c.ContactFullName, c.StatusOn(todayUtc), c.ContractEndDate,
+        CompanyServicesDto.From(c.EnabledServices), supportEmail);
 }

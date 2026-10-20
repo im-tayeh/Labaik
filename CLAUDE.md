@@ -141,9 +141,10 @@ No `Contracts` or `Client` project — backend only.
   `IIdentityService.ProvisionAccountAsync`: admin -> company owner (`POST /admin/companies`),
   company -> supervisor (`POST /company/supervisors`), company -> new pilgrim
   (`POST /company/groups/{id}/members` with an unknown email). A new email gets a confirmed
-  account (no OTP) + temporary password emailed by `AccountEmails`; a confirmed existing account
+  account (no OTP) + temporary password emailed by `AccountEmails` and required to change on first login; a confirmed existing account
   is linked as is (notice email, no password); an unconfirmed existing account is taken over with
-  a temporary password. With `Email:Provider=Logging` the temporary password is only in the logs.
+  a temporary password. Admins: `AdminAccountSeeder` (startup, after `RoleSeeder`) provisions each
+  `Admin:Emails` address the same way (new -> temporary password emailed; existing -> role ensured, no email). With `Email:Provider=Logging` the temporary password is only in the logs.
 
 ---
 
@@ -235,7 +236,7 @@ Work the Backlog top-down without waiting for per-task orders:
   - _Done:_ `POST /auth/google { idToken }` -> same `AuthTokens` as login. `Google.Apis.Auth` validates signature/expiry/audience against `Authentication:Google:ClientIds` (env `Authentication__Google__ClientIds__0..n`; empty -> 400 `Auth.GoogleNotConfigured`). Identity external logins (`AspNetUserLogins`): linked login -> sign in; else link by email only if Google `email_verified` (unconfirmed existing account: password removed before confirming, anti-squatting); else create password-less confirmed user. **Pending:** real Client IDs from Google Cloud._
 - [x] **T10 — Role-based access.** Supervisor vs Pilgrim authorization policies and
   screen gating.
-  - _Done:_ roles `Admin`/`Supervisor` (pilgrim = no role), seeded by `RoleSeeder`; `Admin:Emails` (env `Admin__Emails__0..n`) bootstraps Admin on any token issue; policies `Admin`, `Supervisor` (Supervisor or Admin); `POST /groups` now Supervisor-only (**breaking**: pilgrims get 403); `GET /admin/users?email=`, `PUT|DELETE /admin/users/{id}/supervisor` (applies from next token/refresh); roles exposed in login `user.roles` and `/auth/me`. Group leadership stays per-group (announcements remain leader-only)._
+  - _Done:_ roles `Admin`/`Supervisor` (pilgrim = no role), seeded by `RoleSeeder`; `Admin:Emails` (env `Admin__Emails__0..n`) bootstraps Admin on any token issue (and since 19 Oct 2026 `AdminAccountSeeder` creates a confirmed Admin account per email at startup, temporary password emailed only); policies `Admin`, `Supervisor` (Supervisor or Admin); `POST /groups` now Supervisor-only (**breaking**: pilgrims get 403); `GET /admin/users?email=`, `PUT|DELETE /admin/users/{id}/supervisor` (applies from next token/refresh); roles exposed in login `user.roles` and `/auth/me`. Group leadership stays per-group (announcements remain leader-only)._
 - [x] **T11 — Tests.** xUnit. Start with Domain unit tests (aggregates/state
   machines), then integration tests (Testcontainers) for key endpoints. Wire
   `dotnet test` into CI.
@@ -410,7 +411,7 @@ in T13 is the core of it. Build the rest of F after A if time is tight.
 #### Decisions locked in (flip if you disagree)
 
 1. "Account type" screen + `PUT /auth/account-type`: **removed** (18 Oct 2026). Company accounts are created only from the admin dashboard, supervisors only by their company; never self-registered.
-2. `POST /groups` + join: **kept Admin-only**, not deleted.
+2. `POST /groups`: Admin only. `POST /groups/{code}/join`: any signed-in user (20 Oct 2026).
 3. Multiple groups per supervisor: **yes** (T22).
 4. `pilgrimageType` editable in `PUT`: **yes**.
 5. 1:1 chat + FCM push: **deferred**.
@@ -478,10 +479,9 @@ in T13 is the core of it. Build the rest of F after A if time is tight.
 ## 12. Security Note
 
 ### Production TODO (before real users)
-- **Provisioned accounts get a plaintext temporary password by email and are not forced to change
-  it.** Today users change it via forgot/reset password. Before production, add a forced password
-  change on first login (e.g. a `MustChangePassword` flag returned at login + an endpoint to set the
-  new password) and consider an expiring set-password link instead of emailing a password.
+- **Provisioned accounts receive a plaintext temporary password by email.** They must change it at
+  first sign-in through `POST /auth/change-password`; while required, other API requests return 403
+  `Auth.PasswordChangeRequired`. Consider an expiring set-password link instead of emailing a password.
 - With `Email:Provider=Logging` the temporary password is written to the logs (demo fallback only);
   production must use `Brevo` with the API key in Render env vars.
 

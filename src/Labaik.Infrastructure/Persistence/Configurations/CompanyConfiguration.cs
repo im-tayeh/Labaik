@@ -10,6 +10,7 @@ internal sealed class CompanyConfiguration : IEntityTypeConfiguration<Company>
     {
         builder.ToTable("Companies");
         builder.HasKey(c => c.Id);
+        builder.HasQueryFilter(c => c.DeletedAtUtc == null);
         builder.Property(c => c.Name).HasMaxLength(CompanyErrors.NameMaxLength).IsRequired();
         builder.HasIndex(c => c.OwnerUserId).IsUnique(); // one company per owner account
 

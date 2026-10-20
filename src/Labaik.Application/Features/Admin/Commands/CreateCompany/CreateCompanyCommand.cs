@@ -10,6 +10,7 @@ using Labaik.Domain.Companies;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Labaik.Application.Features.Admin.Commands.CreateCompany;
 
@@ -20,6 +21,9 @@ namespace Labaik.Application.Features.Admin.Commands.CreateCompany;
 public sealed record CreateCompanyCommand : CompanyFields, IRequest<Result<AdminCompanyDto>>
 {
     public string OwnerEmail { get; init; } = string.Empty;
+    public string? TemporaryPassword { get; init; }
+    public bool ForcePasswordChange { get; init; } = true;
+    public bool SendCredentialsByEmail { get; init; } = true;
 }
 
 public sealed class CreateCompanyCommandValidator : CompanyFieldsValidator<CreateCompanyCommand>
@@ -27,6 +31,7 @@ public sealed class CreateCompanyCommandValidator : CompanyFieldsValidator<Creat
     public CreateCompanyCommandValidator()
     {
         RuleFor(x => x.OwnerEmail).NotEmpty().EmailAddress().MaximumLength(CompanyErrors.EmailMaxLength);
+        RuleFor(x => x.TemporaryPassword).MinimumLength(8).When(x => x.TemporaryPassword is not null);
     }
 }
 
@@ -35,6 +40,7 @@ public sealed class CreateCompanyCommandHandler(
     IIdentityService identityService,
     IUserDirectory userDirectory,
     IEmailSender emailSender,
+    IOptions<AppLinksSettings> appLinks,
     TimeProvider timeProvider,
     ILogger<CreateCompanyCommandHandler> logger) : IRequestHandler<CreateCompanyCommand, Result<AdminCompanyDto>>
 {
@@ -59,7 +65,8 @@ public sealed class CreateCompanyCommandHandler(
         }
 
         var owner = await identityService.ProvisionAccountAsync(
-            request.ContactFullName, ownerEmail, request.ContactMobile, Roles.Company, cancellationToken);
+            request.ContactFullName, ownerEmail, request.ContactMobile, Roles.Company,
+            request.TemporaryPassword, request.ForcePasswordChange, cancellationToken);
         if (owner.IsFailure)
         {
             return owner.Error!;
@@ -75,9 +82,13 @@ public sealed class CreateCompanyCommandHandler(
         context.Companies.Add(company);
         await context.SaveChangesAsync(cancellationToken);
 
-        await emailSender.TrySendAsync(owner.Value.Email,
-            AccountEmails.For(owner.Value, "company", company.Name), logger, cancellationToken);
+        if (request.SendCredentialsByEmail)
+        {
+            await emailSender.TrySendAsync(owner.Value.Email,
+                AccountEmails.For(owner.Value, "company", company.Name, appLinks.Value.DownloadUrl), logger, cancellationToken);
+        }
 
-        return await company.ToAdminDtoAsync(context, userDirectory, timeProvider.TodayUtc(), cancellationToken);
+        var dto = await company.ToAdminDtoAsync(context, userDirectory, timeProvider.TodayUtc(), cancellationToken);
+        return dto with { TemporaryPassword = owner.Value.TemporaryPassword };
     }
 }

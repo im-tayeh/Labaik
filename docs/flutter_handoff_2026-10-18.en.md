@@ -163,7 +163,7 @@ Used in `GET /notifications` and `GET /groups/{groupId}/messages`:
 | Pilgrim | Registers in the app (`register` then `verify-email`), or Google, or is created by the company when added to a group with a new email. | none (empty list) |
 | Company | Created by the admin from the web dashboard (`POST /admin/companies`). | `Company` |
 | Supervisor | Created by the company (`POST /company/supervisors`) and added to its roster. | `Supervisor` |
-| Admin | From server configuration (`Admin:Emails`). | `Admin` |
+| Admin | From server configuration (`Admin:Emails`): created at server startup with a temporary password sent by email; sign in with the normal `login`. | `Admin` |
 
 ### Temporary password flow
 
@@ -173,7 +173,7 @@ When an account is created top-down (company, supervisor, or pilgrim added by th
 2. **Registered and confirmed email**: the account is linked as is (the role is added if needed) and a notice is emailed without a password. Its current password does not change. (A registered pilgrim added to a group by the company gets no email.)
 3. **Registered but unconfirmed email**: treated as a new account: its password is replaced by a temporary one sent to the real address, the account is confirmed, and its old sessions are revoked.
 
-The user then logs in normally with `POST /auth/login` and the temporary password. To change it they use the existing forgot-password flow (`forgot-password` then `reset-password`). There is currently no forced change on first login (listed as a pre-production task). A newly granted role for an existing user appears after a token refresh.
+The user then logs in normally with `POST /auth/login` and the temporary password. The response has `mustChangePassword: true`; only `/auth/change-password`, `/auth/logout`, `/auth/me`, and `/auth/refresh-token` are available until the user changes it. `POST /auth/change-password` takes `{ currentPassword, newPassword }` and returns fresh tokens with `mustChangePassword: false`. Reissuing a temporary password revokes the user's refresh tokens.
 
 ---
 
@@ -578,7 +578,9 @@ There are no client-to-server methods on `/hubs/events`. Messages are sent over 
 ## 7. What Flutter must do now
 
 - [ ] Remove the account-type screen and the `PUT /auth/account-type` call. Public signup is pilgrim only.
-- [ ] Read roles from `user.roles` (or `GET /auth/me`): `Company` opens the company UI, `Supervisor` or `Admin` opens the supervisor UI, an empty list is a pilgrim. Accounts created top-down log in directly with the temporary password, without OTP.
+- [ ] Read roles from `user.roles` (or `GET /auth/me`): `Company` opens the company UI, `Supervisor` opens the supervisor UI, `Admin` opens the admin UI, and an empty list is a pilgrim. Accounts created top-down log in directly with the temporary password, without OTP.
+- [ ] When `mustChangePassword` is true, show the required password-change screen and keep other API requests blocked until `/auth/change-password` succeeds.
+- [ ] Serialize refresh-token requests with a single-flight lock. A refresh token can be used only once; concurrent refresh calls can invalidate the second request.
 - [ ] After any role change or unexpected 403: `refresh-token`, retry the request once, then reconnect SignalR with the new token.
 - [ ] Reconnect `/hubs/location` and `/hubs/events` when the group in `/home` changes or after joining a family circle.
 - [ ] Handle notification types 8 to 12, and display unknown types generically instead of crashing. Open the right screen from `referenceId`: message (8 and 9), emergency (10, for the supervisor via `GET /map/emergency/{id}`), lost child (11, via `GET /lost-child-reports/{id}`), circle (12).
@@ -611,7 +613,7 @@ There are no client-to-server methods on `/hubs/events`. Messages are sent over 
 | Religious content review | Ritual (`/rituals`) and guide (`/guides`) texts are placeholders awaiting approval by a trusted religious authority before production. |
 | Google sign-in | The code is ready (`POST /auth/google`). Waiting for the Android, iOS and Web Client IDs in the Render settings (`Authentication__Google__ClientIds__0..n`). Without them it returns 400. |
 | Haram map data | Marked `PendingReview`: gate numbers and coordinates are approximate and will be checked against an official map. No images on the server yet (`imageUrl = null`). |
-| Temporary password | Sent in plain text by email, and the user is not forced to change it on first login. A pre-production task. |
+| Temporary password | Sent in plain text by email; the first sign-in now requires a password change. |
 | File upload | There is no upload service. Images and files are `https` links only (`photoUrl`, `logoUrl`, `imageUrl`, `contractFileUrl`). |
 
 ### Operational notes

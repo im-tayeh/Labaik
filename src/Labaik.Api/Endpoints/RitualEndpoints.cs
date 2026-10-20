@@ -5,6 +5,7 @@ using Labaik.Application.Features.Rituals.Dtos;
 using Labaik.Api.OpenApi;
 using Labaik.Application.Features.Rituals.Commands.CompleteRitualStep;
 using Labaik.Application.Features.Rituals.Commands.ResetRitualProgress;
+using Labaik.Application.Features.Rituals.Commands.SaveRitualSnapshot;
 using Labaik.Application.Features.Rituals.Queries.GetRitualProgress;
 using Labaik.Application.Features.Rituals.Queries.GetRitualSteps;
 using Labaik.Domain.Journeys.Enums;
@@ -41,6 +42,15 @@ public static class RitualEndpoints
         .WithName("GetRitualProgress")
         .WithSummary("Get the current user's ritual progress (starts it on first call)")
         .Returns<RitualProgressDto>().Fails(401, 404).Validates();
+
+        group.MapPut("/progress", async (SaveRitualSnapshotCommand command, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(command, ct);
+            return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
+        })
+        .WithName("SaveRitualProgressSnapshot")
+        .WithSummary("Save the latest ritual snapshot from this device; older client timestamps are ignored")
+        .Returns<RitualProgressDto>().Fails(400, 401, 404).Validates();
 
         group.MapPost("/progress/complete", async (CompleteRitualStepCommand command, ISender sender, CancellationToken ct) =>
         {

@@ -10,6 +10,7 @@ public interface IIdentityService
     Task<Result<AuthUser>> VerifyEmailAsync(string email, string code, CancellationToken cancellationToken = default);
     Task<Result<AuthUser>> LoginAsync(string email, string password, CancellationToken cancellationToken = default);
     Task<Result<AuthUser>> GetAuthUserByIdAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<Result<AuthUser>> ChangePasswordAsync(Guid userId, string currentPassword, string newPassword, CancellationToken cancellationToken = default);
     Task<Result> ResendEmailConfirmationAsync(string email, CancellationToken cancellationToken = default);
     Task<Result> ForgotPasswordAsync(string email, CancellationToken cancellationToken = default);
     // Finds the user linked to the external login, else links by verified email, else creates a user.
@@ -19,7 +20,10 @@ public interface IIdentityService
     // password; a confirmed existing account is reused as is (no password change). An unconfirmed
     // existing account never proved its email, so it is taken over like a new one. Role null = pilgrim.
     Task<Result<ProvisionedAccount>> ProvisionAccountAsync(
-        string fullName, string email, string? phoneNumber, string? role, CancellationToken cancellationToken = default);
+        string fullName, string email, string? phoneNumber, string? role, string? requestedPassword = null,
+        bool mustChangePassword = true, CancellationToken cancellationToken = default);
+    Task<Result<string>> IssueTemporaryPasswordAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task<Result> SetDisabledAsync(Guid userId, bool disabled, CancellationToken cancellationToken = default);
     Task<Result<UserAccountDto>> AddToRoleAsync(Guid userId, string role, CancellationToken cancellationToken = default);
     Task<Result<UserAccountDto>> RemoveFromRoleAsync(Guid userId, string role, CancellationToken cancellationToken = default);
     Task<Result> ResetPasswordAsync(string email, string code, string newPassword, CancellationToken cancellationToken = default);

@@ -17,5 +17,7 @@ public enum NotificationType
     EmergencyReported = 10,     // -> supervisors of the pilgrim's groups (referenceId = alert id, preview = pilgrim name)
     LostChildReported = 11,     // -> reporter's supervisors + (if shared) app users sharing a fresh location within 1 km
                                 //    (referenceId = report id, preview = description)
-    FamilyMemberJoined = 12     // -> family circle owner (referenceId = circle id, preview = new member name)
+    FamilyMemberJoined = 12,    // -> family circle owner (referenceId = circle id, preview = new member name)
+    MemberAddedBySupervisor = 13, // -> company owner when a supervisor adds a pilgrim
+    MemberRemovedBySupervisor = 14 // -> company owner when a supervisor removes a pilgrim
 }

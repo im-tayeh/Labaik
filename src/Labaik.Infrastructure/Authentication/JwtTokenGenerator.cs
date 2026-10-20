@@ -15,7 +15,7 @@ internal sealed class JwtTokenGenerator(
     private readonly JwtSettings _settings = jwtOptions.Value;
 
     public AccessToken GenerateAccessToken(
-        Guid userId, string email, string fullName, IEnumerable<string> roles)
+        Guid userId, string email, string fullName, IEnumerable<string> roles, bool mustChangePassword = false)
     {
         var signingCredentials = new SigningCredentials(
             new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.SigningKey)),
@@ -29,6 +29,10 @@ internal sealed class JwtTokenGenerator(
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
         claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
+        if (mustChangePassword)
+        {
+            claims.Add(new Claim("pwd_change", "true"));
+        }
 
         var now = timeProvider.GetUtcNow().UtcDateTime;
         var expires = now.AddMinutes(_settings.AccessTokenExpiryMinutes);

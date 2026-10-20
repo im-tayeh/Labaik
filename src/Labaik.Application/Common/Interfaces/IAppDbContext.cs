@@ -30,6 +30,7 @@ public interface IAppDbContext
     DbSet<Company> Companies { get; }
     DbSet<Trip> Trips { get; }
     DbSet<PilgrimProfile> PilgrimProfiles { get; }
+    DbSet<Budget> Budgets { get; }
     DbSet<MapPlace> MapPlaces { get; }
     DbSet<EmergencyAlert> EmergencyAlerts { get; }
     DbSet<LostChildReport> LostChildReports { get; }

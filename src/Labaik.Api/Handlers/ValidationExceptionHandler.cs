@@ -33,6 +33,7 @@ internal sealed class ValidationExceptionHandler(IProblemDetailsService problemD
             Type = "https://tools.ietf.org/html/rfc9110#section-15.5.21"
         };
         problemDetails.Extensions["errors"] = errors;
+        problemDetails.Extensions["code"] = "Validation.Failed";
 
         httpContext.Response.StatusCode = problemDetails.Status.Value;
 

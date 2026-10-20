@@ -29,7 +29,7 @@ public class GroupTests(LabaikApiFactory factory)
     }
 
     [Fact]
-    public async Task Pilgrims_and_supervisors_cannot_create_or_join_standalone_groups()
+    public async Task Only_admins_create_standalone_groups_and_any_signed_in_user_can_join()
     {
         var pilgrim = await TestUsers.CreateAsync(factory);
         var supervisor = await TestUsers.CreateSupervisorAsync(factory);
@@ -41,7 +41,8 @@ public class GroupTests(LabaikApiFactory factory)
         var created = await admin.Client.PostAsJsonAsync("/api/v1/groups/", new { name = "Admin group" });
         Assert.Equal(HttpStatusCode.OK, created.StatusCode);
         var code = (await created.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("joinCode").GetString();
-        Assert.Equal(HttpStatusCode.Forbidden, (await pilgrim.Client.PostAsync($"/api/v1/groups/{code}/join", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await pilgrim.Client.PostAsync($"/api/v1/groups/{code}/join", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await pilgrim.Client.PostAsync($"/api/v1/groups/{code}/join", null)).StatusCode);
     }
 
     [Fact]
@@ -98,6 +99,30 @@ public class GroupTests(LabaikApiFactory factory)
         Assert.Equal(HttpStatusCode.NoContent, (await s.Leader.Client.PostAsync("/api/v1/notifications/read-all", null)).StatusCode);
         var count = await s.Leader.Client.GetFromJsonAsync<JsonElement>("/api/v1/notifications/unread-count");
         Assert.Equal(0, count.GetProperty("count").GetInt32());
+    }
+
+    [Fact]
+    public async Task Supervisor_can_manage_group_pilgrims_and_company_is_notified()
+    {
+        var s = await SetupAsync();
+        var email = $"supervisor-added-{Guid.NewGuid():N}@labaik.test";
+        var add = await s.Leader.Client.PostAsJsonAsync($"/api/v1/groups/{s.GroupId}/members",
+            new { email, fullName = "Supervisor Added" });
+        Assert.Equal(HttpStatusCode.OK, add.StatusCode);
+        Assert.NotNull(factory.Emails.TemporaryPasswordFor(email));
+
+        var members = await s.Company.Client.GetFromJsonAsync<JsonElement>($"/api/v1/company/groups/{s.GroupId}/members");
+        var added = members.EnumerateArray().Single(m => m.GetProperty("email").GetString() == email);
+        var userId = added.GetProperty("userId").GetGuid();
+        var companyNotifications = await s.Company.Client.GetFromJsonAsync<JsonElement>("/api/v1/notifications");
+        Assert.Contains(companyNotifications.EnumerateArray(), n => n.GetProperty("type").GetInt32() == 13);
+
+        Assert.Equal(HttpStatusCode.Forbidden,
+            (await s.Member.Client.DeleteAsync($"/api/v1/groups/{s.GroupId}/members/{userId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent,
+            (await s.Leader.Client.DeleteAsync($"/api/v1/groups/{s.GroupId}/members/{userId}")).StatusCode);
+        companyNotifications = await s.Company.Client.GetFromJsonAsync<JsonElement>("/api/v1/notifications");
+        Assert.Contains(companyNotifications.EnumerateArray(), n => n.GetProperty("type").GetInt32() == 14);
     }
 
     [Fact]

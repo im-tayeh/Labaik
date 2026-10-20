@@ -16,6 +16,9 @@ using Labaik.Application.Features.Groups.Commands.CreateGroup;
 using Labaik.Application.Features.Groups.Commands.JoinGroup;
 using Labaik.Application.Features.Groups.Commands.SetGatheringPoint;
 using Labaik.Application.Features.Groups.Commands.SetMemberNotes;
+using Labaik.Application.Features.Groups.Commands.AddGroupMember;
+using Labaik.Application.Features.Groups.Commands.SupervisorAddMember;
+using Labaik.Application.Features.Groups.Commands.SupervisorRemoveMember;
 using Labaik.Application.Features.Groups.Common;
 using Labaik.Application.Features.Groups.Dtos;
 using Labaik.Application.Features.Groups.Queries.GetGatheringPoint;
@@ -67,9 +70,8 @@ public static class GroupEndpoints
             var result = await sender.Send(new JoinGroupCommand(code), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         })
-        .RequireAuthorization(AuthorizationPolicies.Admin)
         .WithName("JoinGroup")
-        .WithSummary("Join a group by its code (admin only; companies add members via /company/groups/{groupId}/members)")
+        .WithSummary("Join a group by its code (any signed-in user; 409 Group.AlreadyMember)")
         .Returns<GroupSummaryDto>().Fails(401, 403, 404, 409);
 
         group.MapPost("/{groupId:guid}/announcements", async (Guid groupId, PostAnnouncementRequest body, ISender sender, CancellationToken ct) =>
@@ -177,6 +179,24 @@ public static class GroupEndpoints
         .WithName("GetGroupMember")
         .WithSummary("Member card incl. health notes (group supervisor only)")
         .Returns<GroupMemberDetailsDto>().Fails(401, 403, 404);
+
+        group.MapPost("/{groupId:guid}/members", async (Guid groupId, AddGroupMemberRequest body, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new SupervisorAddMemberCommand(groupId, body.Email, body.FullName, body.PhoneNumber), ct);
+            return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
+        })
+        .WithName("SupervisorAddGroupMember")
+        .WithSummary("Add a pilgrim by email to my group (group supervisor only; unknown email gets a temporary-password email)")
+        .Returns<Labaik.Application.Features.Groups.Dtos.CompanyGroupDto>().Fails(400, 401, 403, 404, 409).Validates();
+
+        group.MapDelete("/{groupId:guid}/members/{userId:guid}", async (Guid groupId, Guid userId, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new SupervisorRemoveMemberCommand(groupId, userId), ct);
+            return result.IsSuccess ? Results.NoContent() : result.Error!.ToProblem();
+        })
+        .WithName("SupervisorRemoveGroupMember")
+        .WithSummary("Remove a pilgrim from my group (group supervisor only; notifies the company)")
+        .ReturnsNoContent().Fails(401, 403, 404);
 
         group.MapPut("/{groupId:guid}/members/{userId:guid}/notes", async (Guid groupId, Guid userId, SetMemberNotesRequest body, ISender sender, CancellationToken ct) =>
         {

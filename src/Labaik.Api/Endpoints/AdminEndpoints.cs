@@ -3,6 +3,10 @@ using Asp.Versioning.Builder;
 using Labaik.Api.Extensions;
 using Labaik.Api.OpenApi;
 using Labaik.Application.Features.Admin.Commands.CreateCompany;
+using Labaik.Application.Features.Admin.Commands.DeleteCompany;
+using Labaik.Application.Features.Admin.Commands.SetUserDisabled;
+using Labaik.Application.Features.Admin.Commands.IssueCompanyTempPassword;
+using Labaik.Application.Common.Provisioning;
 using Labaik.Application.Features.Admin.Commands.SetCompanyStopped;
 using Labaik.Application.Features.Admin.Commands.SetSupervisorRole;
 using Labaik.Application.Features.Admin.Commands.UpdateCompany;
@@ -77,11 +81,47 @@ public static class AdminEndpoints
                 : result.Error!.ToProblem();
         })
         .WithName("CreateCompany")
-        .WithSummary("Create a company and its owner account (new email: temporary password emailed; registered email: linked as owner)")
+        .WithSummary("Create a company and its owner account (optional temporary password/force-change/email fields; password returned once for new accounts)")
         .WithRequestExample(AdminExamples.CreateCompany)
         .WithResponseExample(StatusCodes.Status201Created, AdminExamples.Company)
         .ProducesProblem(StatusCodes.Status409Conflict)
         .ProducesValidationProblem(StatusCodes.Status422UnprocessableEntity);
+
+        group.MapDelete("/companies/{id:guid}", async (Guid id, bool? force, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new DeleteCompanyCommand(id, force == true), ct);
+            return result.IsSuccess ? Results.NoContent() : result.Error!.ToProblem();
+        })
+        .WithName("DeleteCompany")
+        .WithSummary("Soft-delete a company and disable its owner and roster supervisors; force may be needed for active trips")
+        .ReturnsNoContent().Fails(404, 409);
+
+        group.MapPost("/users/{userId:guid}/disable", async (Guid userId, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new SetUserDisabledCommand(userId, true), ct);
+            return result.IsSuccess ? Results.NoContent() : result.Error!.ToProblem();
+        })
+        .WithName("DisableUser")
+        .WithSummary("Disable an account and revoke its refresh tokens")
+        .ReturnsNoContent().Fails(404);
+
+        group.MapPost("/users/{userId:guid}/enable", async (Guid userId, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new SetUserDisabledCommand(userId, false), ct);
+            return result.IsSuccess ? Results.NoContent() : result.Error!.ToProblem();
+        })
+        .WithName("EnableUser")
+        .WithSummary("Enable an account")
+        .ReturnsNoContent().Fails(404);
+
+        group.MapPost("/companies/{id:guid}/temp-password", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new IssueCompanyTempPasswordCommand(id), ct);
+            return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
+        })
+        .WithName("IssueCompanyTemporaryPassword")
+        .WithSummary("Issue and email a new temporary password to the company owner; returns the password once")
+        .Returns<TemporaryPasswordDto>().Fails(404);
 
         group.MapGet("/companies", async (ISender sender, CancellationToken ct) =>
         {

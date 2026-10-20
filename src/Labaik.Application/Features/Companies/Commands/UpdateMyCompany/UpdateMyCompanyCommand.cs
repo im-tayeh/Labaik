@@ -2,10 +2,12 @@ using FluentValidation;
 using Labaik.Application.Common.Interfaces;
 using Labaik.Application.Features.Companies.Common;
 using Labaik.Application.Features.Companies.Dtos;
+using Labaik.Application.Features.Companies.Queries.GetMyCompany;
 using Labaik.Domain.Common.Results;
 using Labaik.Domain.Companies;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Labaik.Application.Features.Companies.Commands.UpdateMyCompany;
 
@@ -42,7 +44,9 @@ public sealed class UpdateMyCompanyCommandValidator : AbstractValidator<UpdateMy
 
 public sealed class UpdateMyCompanyCommandHandler(
     IAppDbContext context,
-    ICurrentUser currentUser) : IRequestHandler<UpdateMyCompanyCommand, Result<CompanyDto>>
+    ICurrentUser currentUser,
+    TimeProvider timeProvider,
+    IOptions<SupportSettings> supportOptions) : IRequestHandler<UpdateMyCompanyCommand, Result<CompanyDto>>
 {
     public async Task<Result<CompanyDto>> Handle(UpdateMyCompanyCommand request, CancellationToken cancellationToken)
     {
@@ -69,6 +73,6 @@ public sealed class UpdateMyCompanyCommandHandler(
         }
 
         await context.SaveChangesAsync(cancellationToken);
-        return company.ToDto();
+        return company.ToDto(DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime), supportOptions.Value.Email);
     }
 }

@@ -37,7 +37,9 @@ internal static class AdminExamples
         ContactJobTitle = "Operations Manager",
         ContactMobile = "+966501234567",
         EnabledServices = Services,
-        OwnerEmail = "owner@alnoor.example"
+        OwnerEmail = "owner@alnoor.example",
+        ForcePasswordChange = true,
+        SendCredentialsByEmail = true
     };
 
     public static readonly UpdateCompanyRequest UpdateCompany = new()
@@ -69,7 +71,8 @@ internal static class AdminExamples
         CreateCompany.MaxSupervisors, CreateCompany.MaxPilgrims, CreateCompany.ContractFileUrl,
         CreateCompany.ContactFullName, CreateCompany.ContactJobTitle, CreateCompany.ContactMobile, Services,
         IsStopped: false, CompanyStatus.Active, DaysRemaining: 347,
-        new AdminCompanyStatsDto(TripsCount: 3, ActiveTripsCount: 2, GroupsCount: 5, SupervisorsCount: 4, ActivePilgrims: 182));
+        new AdminCompanyStatsDto(TripsCount: 3, ActiveTripsCount: 2, GroupsCount: 5, SupervisorsCount: 4, ActivePilgrims: 182))
+    { TemporaryPassword = "Temp-Pass1!" };
 
     public static readonly IReadOnlyList<AdminCompanyListItemDto> Companies =
     [

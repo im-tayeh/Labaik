@@ -139,9 +139,10 @@ public sealed class Group : AggregateRoot
     }
 
     // Company adds a pilgrim (same rules and event as joining by code).
-    public Result AddMember(Guid userId, DateTimeOffset addedAtUtc) => Join(userId, addedAtUtc);
+    public Result AddMember(Guid userId, DateTimeOffset addedAtUtc, Guid? addedBySupervisorId = null)
+        => Join(userId, addedAtUtc, addedBySupervisorId);
 
-    public Result RemoveMember(Guid userId)
+    public Result RemoveMember(Guid userId, Guid? removedBySupervisorId = null)
     {
         var member = _members.FirstOrDefault(m => m.UserId == userId);
         if (member is null)
@@ -155,6 +156,10 @@ public sealed class Group : AggregateRoot
         }
 
         _members.Remove(member);
+        if (removedBySupervisorId is { } supervisorId && CompanyId is { } companyId)
+        {
+            Raise(new MemberRemovedFromGroup(Id, userId, companyId, supervisorId));
+        }
         return Result.Success();
     }
 
@@ -314,7 +319,7 @@ public sealed class Group : AggregateRoot
         return Result.Success();
     }
 
-    public Result Join(Guid userId, DateTimeOffset joinedAtUtc)
+    public Result Join(Guid userId, DateTimeOffset joinedAtUtc, Guid? addedBySupervisorId = null)
     {
         if (_members.Any(m => m.UserId == userId))
         {
@@ -323,7 +328,7 @@ public sealed class Group : AggregateRoot
 
         LastMemberNumber++;
         _members.Add(new GroupMember(userId, GroupMemberRole.Member, joinedAtUtc, LastMemberNumber));
-        Raise(new MemberJoinedGroup(Id, userId));
+        Raise(new MemberJoinedGroup(Id, userId, CompanyId, addedBySupervisorId));
 
         // Pilgrims are now waiting in a company group with nobody responsible: tell the company once.
         if (CompanyId is { } companyId && !HasSupervisor && PilgrimCount == 1)

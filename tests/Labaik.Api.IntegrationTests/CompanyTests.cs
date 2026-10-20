@@ -19,6 +19,8 @@ public class CompanyTests(LabaikApiFactory factory)
         Assert.Contains("Company", me.GetProperty("roles").EnumerateArray().Select(r => r.GetString()));
         Assert.Equal(companyId, company.GetProperty("id").GetGuid());
         Assert.Equal("Al Noor Travel", company.GetProperty("name").GetString());
+        Assert.Equal(1, company.GetProperty("status").GetInt32());
+        Assert.True(company.GetProperty("enabledServices").GetProperty("gpsTracking").GetBoolean());
     }
 
     [Fact]
@@ -41,7 +43,20 @@ public class CompanyTests(LabaikApiFactory factory)
         var created = await admin.Client.PostAsJsonAsync("/api/v1/admin/companies", TestUsers.NewCompanyBody("Fresh Travel", email));
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
 
-        var owner = await TestUsers.SignInProvisionedAsync(factory, email); // no OTP step
+        var tokens = await factory.CreateClient().PostAsJsonAsync("/api/v1/auth/login",
+            new { email, password = factory.Emails.TemporaryPasswordFor(email) });
+        Assert.Equal(HttpStatusCode.OK, tokens.StatusCode);
+        var initialTokens = await tokens.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.True(initialTokens.GetProperty("mustChangePassword").GetBoolean());
+        var initialUser = await TestUsers.ToUserAsync(factory, email, tokens);
+        var blocked = await initialUser.Client.GetAsync("/api/v1/home");
+        Assert.Equal(HttpStatusCode.Forbidden, blocked.StatusCode);
+        var blockedProblem = await blocked.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Auth.PasswordChangeRequired", blockedProblem.GetProperty("code").GetString());
+        var owner = await TestUsers.SignInProvisionedAsync(factory, email); // changes the temporary password
+        var changedUser = await owner.Client.GetFromJsonAsync<JsonElement>("/api/v1/auth/me");
+        Assert.False(changedUser.GetProperty("mustChangePassword").GetBoolean());
+        Assert.Equal(HttpStatusCode.OK, (await owner.Client.GetAsync("/api/v1/home")).StatusCode);
         var me = await owner.Client.GetFromJsonAsync<JsonElement>("/api/v1/auth/me");
         var company = await owner.Client.GetFromJsonAsync<JsonElement>("/api/v1/company/me");
         Assert.Contains("Company", me.GetProperty("roles").EnumerateArray().Select(r => r.GetString()));

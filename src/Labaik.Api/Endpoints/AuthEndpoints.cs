@@ -3,8 +3,10 @@ using Labaik.Api.Extensions;
 using Labaik.Api.OpenApi;
 using Labaik.Application.Common.Models;
 using Labaik.Application.Features.Authentication.ForgotPassword;
+using Labaik.Application.Features.Authentication.ChangePassword;
 using Labaik.Application.Features.Authentication.GoogleSignIn;
 using Labaik.Application.Features.Authentication.Login;
+using Labaik.Application.Features.Authentication.Logout;
 using Labaik.Application.Features.Authentication.RefreshToken;
 using Labaik.Application.Features.Authentication.Register;
 using Labaik.Application.Features.Authentication.ResendCode;
@@ -76,6 +78,25 @@ public static class AuthEndpoints
         .WithSummary("Exchange a refresh token for a new token pair (single use; the old one is revoked)")
         .Returns<AuthTokens>().Fails(401).Validates();
 
+        group.MapPost("/change-password", async (ChangePasswordCommand command, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(command, ct);
+            return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
+        })
+        .RequireAuthorization()
+        .WithName("ChangePassword")
+        .WithSummary("Change my password (clears mustChangePassword; revokes other sessions; returns new tokens)")
+        .Returns<AuthTokens>().Fails(400, 401).Validates();
+
+        group.MapPost("/logout", async (LogoutCommand command, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(command, ct);
+            return result.IsSuccess ? Results.NoContent() : result.Error!.ToProblem();
+        })
+        .WithName("Logout")
+        .WithSummary("Revoke a refresh token (idempotent; no access token required)")
+        .ReturnsNoContent().Fails(422).Validates();
+
         group.MapPost("/resend-code", async (ResendCodeCommand command, ISender sender, CancellationToken ct) =>
         {
             var result = await sender.Send(command, ct);
@@ -84,7 +105,7 @@ public static class AuthEndpoints
                 : result.Error!.ToProblem();
         })
         .WithName("ResendCode")
-        .WithSummary("Resend the email verification code (429 within 55 s of the last one)")
+        .WithSummary("Resend the pending code: email verification for an unconfirmed account, password reset for a confirmed one (429 within 55 s)")
         .Returns<MessageResponse>().Fails(429).Validates();
 
         group.MapPost("/forgot-password", async (ForgotPasswordCommand command, ISender sender, CancellationToken ct) =>
@@ -111,7 +132,8 @@ public static class AuthEndpoints
             user.FindFirstValue(JwtRegisteredClaimNames.Sub),
             user.FindFirstValue(JwtRegisteredClaimNames.Email),
             user.FindFirstValue(JwtRegisteredClaimNames.Name),
-            user.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList())))
+            user.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList(),
+            user.HasClaim("pwd_change", "true"))))
         .RequireAuthorization()
         .WithName("GetMe")
         .WithSummary("Return the authenticated user's claims (roles: [] for a pilgrim)")

@@ -11,6 +11,7 @@ internal sealed class RitualProgressConfiguration : IEntityTypeConfiguration<Rit
         builder.ToTable("RitualProgresses");
         builder.HasKey(p => p.Id);
         builder.Property(p => p.UserId).IsRequired();
+        builder.Property(p => p.CurrentStepKey).HasMaxLength(100);
         builder.HasIndex(p => new { p.UserId, p.PilgrimageType }).IsUnique(); // one progress per user and type
 
         // Completed steps are appended to an already-saved aggregate across requests.

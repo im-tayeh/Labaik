@@ -1,10 +1,12 @@
 using Labaik.Api.Endpoints;
 using Labaik.Api.Extensions;
 using Labaik.Api.Handlers;
+using Labaik.Api.Middleware;
 using Labaik.Api.Realtime;
 using Labaik.Api.Services;
 using Labaik.Application;
 using Labaik.Application.Common.Interfaces;
+using Labaik.Application.Common.Provisioning;
 using Labaik.Infrastructure;
 using Labaik.Infrastructure.Authentication;
 using Labaik.Infrastructure.Persistence;
@@ -52,11 +54,34 @@ try
                 $"{context.HttpContext.Request.Method} {context.HttpContext.Request.Path}";
             context.ProblemDetails.Extensions["traceId"] =
                 Activity.Current?.Id ?? context.HttpContext.TraceIdentifier;
+            if (!context.ProblemDetails.Extensions.ContainsKey("code"))
+            {
+                context.ProblemDetails.Extensions["code"] = context.ProblemDetails.Status switch
+                {
+                    StatusCodes.Status401Unauthorized => "Auth.Unauthorized",
+                    StatusCodes.Status403Forbidden => "Auth.Forbidden",
+                    StatusCodes.Status404NotFound => "NotFound",
+                    _ => "Error"
+                };
+            }
         };
     });
 
+    var corsOrigins = builder.Configuration.GetSection("Cors:Origins").Get<string[]>() ?? [];
+    builder.Services.AddCors(options => options.AddPolicy("Dashboard", policy => policy
+        .SetIsOriginAllowed(origin =>
+            corsOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase)
+            || (Uri.TryCreate(origin, UriKind.Absolute, out var uri)
+                && string.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase)))
+        .WithHeaders("Authorization", "Content-Type")
+        .AllowAnyMethod()
+        .AllowCredentials()));
+
     builder.Services.AddApplication();
     builder.Services.AddInfrastructure(builder.Configuration);
+    builder.Services.AddOptions<AppLinksSettings>().Bind(builder.Configuration.GetSection(AppLinksSettings.SectionName));
+    builder.Services.Configure<Labaik.Application.Features.Companies.Queries.GetMyCompany.SupportSettings>(
+        builder.Configuration.GetSection(Labaik.Application.Features.Companies.Queries.GetMyCompany.SupportSettings.SectionName));
     builder.Services.AddApiVersioningConfiguration();
 
     var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()!;
@@ -119,6 +144,7 @@ try
         await GuideArticleSeeder.SeedAsync(dbContext, seedLogger);
         await MapPlaceSeeder.SeedAsync(dbContext, seedLogger);
         await RoleSeeder.SeedAsync(scope.ServiceProvider, seedLogger);
+        await AdminAccountSeeder.SeedAsync(scope.ServiceProvider, seedLogger);
     }
 
     // One tidy structured line per HTTP request (method, path, status, elapsed ms).
@@ -138,7 +164,9 @@ try
 
     app.UseHttpsRedirection();
 
+    app.UseCors("Dashboard");
     app.UseAuthentication();
+    app.UseMiddleware<PasswordChangeRequiredMiddleware>();
     app.UseAuthorization();
 
     app.MapAuthEndpoints();
@@ -153,6 +181,7 @@ try
     app.MapAdminEndpoints();
     app.MapCompanyEndpoints();
     app.MapProfileEndpoints();
+    app.MapFileEndpoints();
     app.MapSupervisorEndpoints();
     app.MapTripEndpoints();
     app.MapMapEndpoints();

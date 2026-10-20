@@ -29,6 +29,6 @@ public static class EndpointContractExtensions
 // Named shapes for responses that used anonymous objects (same JSON as before).
 public sealed record MessageResponse(string Message);
 
-public sealed record MeResponse(string? Id, string? Email, string? Name, IReadOnlyList<string> Roles);
+public sealed record MeResponse(string? Id, string? Email, string? Name, IReadOnlyList<string> Roles, bool MustChangePassword = false);
 
 public sealed record CreatedIdResponse(Guid Id);

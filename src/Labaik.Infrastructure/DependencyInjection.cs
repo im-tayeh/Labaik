@@ -5,6 +5,7 @@ using Labaik.Infrastructure.Groups;
 using Labaik.Infrastructure.Identity;
 using Labaik.Infrastructure.Persistence;
 using Labaik.Infrastructure.Persistence.Interceptors;
+using Labaik.Infrastructure.Storage;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -46,6 +47,8 @@ public static class DependencyInjection
             .AddDefaultTokenProviders();
 
         services.AddScoped<IIdentityService, IdentityService>();
+        services.AddOptions<StorageSettings>().Bind(configuration.GetSection(StorageSettings.SectionName));
+        services.AddScoped<IFileStorage, S3FileStorage>();
         services.AddOptions<AdminSettings>()
             .Bind(configuration.GetSection(AdminSettings.SectionName));
         services.AddScoped<IVerificationCodeService, VerificationCodeService>();

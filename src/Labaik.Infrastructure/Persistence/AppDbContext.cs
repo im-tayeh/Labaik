@@ -39,6 +39,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Company> Companies => Set<Company>();
     public DbSet<Trip> Trips => Set<Trip>();
     public DbSet<PilgrimProfile> PilgrimProfiles => Set<PilgrimProfile>();
+    public DbSet<Budget> Budgets => Set<Budget>();
     public DbSet<MapPlace> MapPlaces => Set<MapPlace>();
     public DbSet<EmergencyAlert> EmergencyAlerts => Set<EmergencyAlert>();
     public DbSet<LostChildReport> LostChildReports => Set<LostChildReport>();
@@ -47,6 +48,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+        builder.Entity<ApplicationUser>().Property(user => user.MustChangePassword).HasDefaultValue(false);
         builder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
     }
 }

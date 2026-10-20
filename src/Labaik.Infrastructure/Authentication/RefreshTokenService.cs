@@ -64,6 +64,18 @@ internal sealed class RefreshTokenService(
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task RevokeAsync(string refreshToken, CancellationToken cancellationToken = default)
+    {
+        var hash = Hash(refreshToken);
+        var stored = await dbContext.RefreshTokens
+            .FirstOrDefaultAsync(rt => rt.TokenHash == hash, cancellationToken);
+        if (stored is not null && stored.RevokedAt is null)
+        {
+            stored.Revoke(timeProvider.GetUtcNow());
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+    }
+
     private static string Hash(string token)
         => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
 }

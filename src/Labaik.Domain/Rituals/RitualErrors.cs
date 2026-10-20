@@ -10,6 +10,9 @@ public static class RitualErrors
     public static Error InvalidOrder =>
         Error.Validation("Ritual.InvalidOrder", "Step order must be greater than zero.");
 
+    public static Error InvalidRound =>
+        Error.Validation("Ritual.InvalidRound", "Tawaf rounds and Saee laps must be between 1 and 7.");
+
     public static Error TitleRequired =>
         Error.Validation("Ritual.TitleRequired", "Step title is required.");
 

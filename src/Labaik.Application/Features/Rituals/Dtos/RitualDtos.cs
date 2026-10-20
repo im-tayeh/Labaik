@@ -25,4 +25,9 @@ public sealed record RitualProgressDto(
     DateTimeOffset StartedAtUtc,
     DateTimeOffset? CompletedAtUtc,
     RitualStepDto? CurrentStep, // null once all steps are completed
-    IReadOnlyList<CompletedRitualStepDto> CompletedSteps);
+    IReadOnlyList<CompletedRitualStepDto> CompletedSteps,
+    string? CurrentStepKey = null,
+    int? TawafRound = null,
+    int? SaeeLap = null,
+    IhramState? IhramState = null,
+    DateTimeOffset? ClientUpdatedAtUtc = null);

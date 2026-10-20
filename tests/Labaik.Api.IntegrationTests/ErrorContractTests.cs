@@ -55,7 +55,7 @@ public class ErrorContractTests(LabaikApiFactory factory)
             new { fullName = "", email = "bad", password = "short" }), HttpStatusCode.UnprocessableEntity);
         var keys = register.GetProperty("errors").EnumerateObject().Select(p => p.Name).ToList();
         Assert.Equal(["email", "fullName", "password"], keys.Order());
-        Assert.False(register.TryGetProperty("code", out _)); // 422 carries "errors", not a single code
+        Assert.Equal("Validation.Failed", register.GetProperty("code").GetString());
 
         var user = await TestUsers.CreateAsync(factory);
         var journey = await ProblemAsync(await user.Client.PostAsJsonAsync("/api/v1/journeys", new
@@ -73,5 +73,17 @@ public class ErrorContractTests(LabaikApiFactory factory)
         var route = await ProblemAsync(await user.Client.GetAsync("/api/v1/map/route?fromLat=21.4&fromLng=39.8"),
             HttpStatusCode.UnprocessableEntity);
         Assert.True(route.GetProperty("errors").TryGetProperty("destination", out _));
+    }
+
+    [Fact]
+    public async Task Framework_authentication_and_authorization_errors_carry_codes()
+    {
+        var client = factory.CreateClient();
+        var unauthorized = await ProblemAsync(await client.GetAsync("/api/v1/home"), HttpStatusCode.Unauthorized);
+        Assert.Equal("Auth.Unauthorized", unauthorized.GetProperty("code").GetString());
+
+        var user = await TestUsers.CreateAsync(factory);
+        var forbidden = await ProblemAsync(await user.Client.GetAsync("/api/v1/admin/overview"), HttpStatusCode.Forbidden);
+        Assert.Equal("Auth.Forbidden", forbidden.GetProperty("code").GetString());
     }
 }

@@ -42,6 +42,11 @@ public class CompanyGroupTests(LabaikApiFactory factory)
         Assert.Equal(0, group.GetProperty("pilgrimCount").GetInt32());
         var list = await company.Client.GetFromJsonAsync<JsonElement>($"/api/v1/company/trips/{tripId}/groups");
         Assert.Equal(group.GetProperty("id").GetGuid(), Assert.Single(list.EnumerateArray()).GetProperty("id").GetGuid());
+
+        var allGroups = await company.Client.GetFromJsonAsync<JsonElement>("/api/v1/company/groups");
+        var row = Assert.Single(allGroups.EnumerateArray());
+        Assert.Equal("December Umrah", row.GetProperty("tripName").GetString());
+        Assert.Equal("2030-12-10", row.GetProperty("tripDepartureDate").GetString());
     }
 
     [Fact]

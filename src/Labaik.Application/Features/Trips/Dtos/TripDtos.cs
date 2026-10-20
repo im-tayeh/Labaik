@@ -12,7 +12,8 @@ public sealed record TripSummaryDto(
     DateOnly DepartureDate,
     DateOnly? ReturnDate,
     int ExpectedPilgrims,
-    TripStatus Status);
+    TripStatus Status,
+    IReadOnlyList<string>? Destinations = null);
 
 // Trip details screen.
 public sealed record TripDto(
@@ -35,7 +36,7 @@ public static class TripMapper
         t.DeparturePlace, t.ExpectedPilgrims, t.Notes, t.StatusOn(todayUtc), t.CreatedAtUtc);
 
     public static TripSummaryDto ToSummary(this Trip t, DateOnly todayUtc) => new(
-        t.Id, t.Name, t.PilgrimageType, t.DepartureDate, t.ReturnDate, t.ExpectedPilgrims, t.StatusOn(todayUtc));
+        t.Id, t.Name, t.PilgrimageType, t.DepartureDate, t.ReturnDate, t.ExpectedPilgrims, t.StatusOn(todayUtc), t.Destinations);
 
     public static DateOnly TodayUtc(this TimeProvider timeProvider) => DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
 }

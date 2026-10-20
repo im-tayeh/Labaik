@@ -9,6 +9,7 @@ using Labaik.Domain.Companies;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Labaik.Application.Features.Companies.Commands.AddCompanySupervisor;
 
@@ -34,6 +35,7 @@ public sealed class AddCompanySupervisorCommandHandler(
     IIdentityService identityService,
     IUserDirectory userDirectory,
     IEmailSender emailSender,
+    IOptions<AppLinksSettings> appLinks,
     TimeProvider timeProvider,
     ILogger<AddCompanySupervisorCommandHandler> logger)
     : IRequestHandler<AddCompanySupervisorCommand, Result<CompanySupervisorDto>>
@@ -58,7 +60,7 @@ public sealed class AddCompanySupervisorCommandHandler(
         }
 
         var account = await identityService.ProvisionAccountAsync(
-            request.FullName, email, request.PhoneNumber, Roles.Supervisor, cancellationToken);
+            request.FullName, email, request.PhoneNumber, Roles.Supervisor, cancellationToken: cancellationToken);
         if (account.IsFailure)
         {
             return account.Error!;
@@ -73,7 +75,7 @@ public sealed class AddCompanySupervisorCommandHandler(
         await context.SaveChangesAsync(cancellationToken);
 
         await emailSender.TrySendAsync(account.Value.Email,
-            AccountEmails.For(account.Value, "supervisor", company.Name), logger, cancellationToken);
+            AccountEmails.For(account.Value, "supervisor", company.Name, appLinks.Value.DownloadUrl), logger, cancellationToken);
 
         var contact = await userDirectory.GetContactAsync(account.Value.Id, cancellationToken);
         return new CompanySupervisorDto(

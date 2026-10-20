@@ -16,5 +16,6 @@ public static class RitualMapper
         p.CompletedSteps
             .OrderBy(c => c.StepOrder)
             .Select(c => new CompletedRitualStepDto(c.StepOrder, c.CompletedAtUtc))
-            .ToList());
+            .ToList(),
+        p.CurrentStepKey, p.TawafRound, p.SaeeLap, p.IhramState, p.ClientUpdatedAtUtc);
 }

@@ -2,6 +2,7 @@ using Labaik.Domain.Common;
 using Labaik.Domain.Common.Results;
 using Labaik.Domain.Journeys.Enums;
 using Labaik.Domain.Rituals.Events;
+using Labaik.Domain.Rituals.Enums;
 
 namespace Labaik.Domain.Rituals;
 
@@ -13,6 +14,11 @@ public sealed class RitualProgress : AggregateRoot
     public int CurrentOrder { get; private set; }
     public DateTimeOffset StartedAtUtc { get; private set; }
     public DateTimeOffset? CompletedAtUtc { get; private set; }
+    public string? CurrentStepKey { get; private set; }
+    public int? TawafRound { get; private set; }
+    public int? SaeeLap { get; private set; }
+    public IhramState? IhramState { get; private set; }
+    public DateTimeOffset? ClientUpdatedAtUtc { get; private set; }
 
     private readonly List<CompletedRitualStep> _completedSteps = [];
     public IReadOnlyList<CompletedRitualStep> CompletedSteps => _completedSteps.AsReadOnly();
@@ -91,6 +97,21 @@ public sealed class RitualProgress : AggregateRoot
         CurrentOrder = firstOrder;
         StartedAtUtc = restartedAtUtc;
         CompletedAtUtc = null;
+        return Result.Success();
+    }
+
+    // Last write wins by client timestamp; stale snapshots are ignored.
+    public Result SaveSnapshot(
+        string? stepKey, int? round, int? saeeLap, IhramState? ihramState, DateTimeOffset updatedAtUtc)
+    {
+        if (round is < 1 or > 7 || saeeLap is < 1 or > 7) return Result.Failure(RitualErrors.InvalidRound);
+        if (ClientUpdatedAtUtc is { } last && updatedAtUtc <= last) return Result.Success();
+
+        CurrentStepKey = string.IsNullOrWhiteSpace(stepKey) ? null : stepKey.Trim();
+        TawafRound = round;
+        SaeeLap = saeeLap;
+        IhramState = ihramState;
+        ClientUpdatedAtUtc = updatedAtUtc;
         return Result.Success();
     }
 }

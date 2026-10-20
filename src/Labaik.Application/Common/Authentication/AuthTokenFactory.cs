@@ -9,11 +9,11 @@ internal sealed class AuthTokenFactory(
 {
     public async Task<AuthTokens> CreateAsync(AuthUser user, CancellationToken cancellationToken = default)
     {
-        var accessToken = jwtTokenGenerator.GenerateAccessToken(user.Id, user.Email, user.FullName, user.Roles);
+        var accessToken = jwtTokenGenerator.GenerateAccessToken(user.Id, user.Email, user.FullName, user.Roles, user.MustChangePassword);
         var refreshToken = await refreshTokenService.IssueAsync(user.Id, cancellationToken);
 
         return new AuthTokens(
             accessToken.Value, refreshToken, "Bearer", accessToken.ExpiresInSeconds,
-            new AuthUserSummary(user.Id, user.Email, user.FullName, user.Roles));
+            new AuthUserSummary(user.Id, user.Email, user.FullName, user.Roles), user.MustChangePassword);
     }
 }

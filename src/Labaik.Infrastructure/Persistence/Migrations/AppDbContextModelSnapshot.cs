@@ -46,6 +46,9 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTimeOffset?>("DeletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTimeOffset?>("GatheringTimeUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -663,6 +666,33 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                     b.ToTable("PilgrimProfiles", (string)null);
                 });
 
+            modelBuilder.Entity("Labaik.Domain.Profiles.Budget", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uuid");
+                    b.Property<string>("Currency").IsRequired().HasMaxLength(3).HasColumnType("character varying(3)");
+                    b.Property<decimal>("TotalAmount").HasColumnType("numeric");
+                    b.Property<Guid>("UserId").HasColumnType("uuid");
+                    b.HasKey("Id");
+                    b.HasIndex("UserId").IsUnique();
+                    b.ToTable("Budgets", (string)null);
+
+                    b.OwnsMany("Labaik.Domain.Profiles.Expense", "Expenses", b1 =>
+                        {
+                            b1.Property<Guid>("Id").HasColumnType("uuid");
+                            b1.Property<decimal>("Amount").HasColumnType("numeric");
+                            b1.Property<string>("Category").IsRequired().HasMaxLength(100).HasColumnType("character varying(100)");
+                            b1.Property<string>("Note").HasMaxLength(500).HasColumnType("character varying(500)");
+                            b1.Property<DateTimeOffset>("SpentAtUtc").HasColumnType("timestamp with time zone");
+                            b1.Property<Guid>("BudgetId").HasColumnType("uuid");
+                            b1.HasKey("Id");
+                            b1.HasIndex("BudgetId");
+                            b1.ToTable("BudgetExpenses", (string)null);
+                            b1.WithOwner().HasForeignKey("BudgetId");
+                        });
+
+                    b.Navigation("Expenses");
+                });
+
             modelBuilder.Entity("Labaik.Domain.Rituals.RitualProgress", b =>
                 {
                     b.Property<Guid>("Id")
@@ -672,7 +702,23 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("CompletedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTimeOffset?>("ClientUpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<int>("CurrentOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CurrentStepKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int?>("IhramState")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("SaeeLap")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("TawafRound")
                         .HasColumnType("integer");
 
                     b.Property<int>("PilgrimageType")
@@ -810,6 +856,10 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                     b.Property<string>("FullName")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<bool>("MustChangePassword")
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("boolean");
