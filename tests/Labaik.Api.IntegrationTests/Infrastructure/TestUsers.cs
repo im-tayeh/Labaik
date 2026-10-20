@@ -32,7 +32,7 @@ public static class TestUsers
         return ToUser(factory, email, json);
     }
 
-    private static TestUser ToUser(LabaikApiFactory factory, string email, JsonElement json)
+    public static TestUser ToUser(LabaikApiFactory factory, string email, JsonElement json)
     {
         var accessToken = json.GetProperty("accessToken").GetString()!;
         var client = factory.CreateClient();

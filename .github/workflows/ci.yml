@@ -35,11 +35,4 @@ jobs:
       # Domain unit tests + API integration tests (Testcontainers starts PostgreSQL in Docker,
       # which GitHub's ubuntu runners provide).
       - name: Test
-        run: UPDATE_OPENAPI_SNAPSHOT=1 dotnet test --configuration Release --no-build --verbosity normal
-
-      - name: Upload generated OpenAPI snapshot
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: openapi-snapshot
-          path: docs/openapi/v1.json
+        run: dotnet test --configuration Release --no-build --verbosity normal

@@ -48,7 +48,7 @@ public class CompanyTests(LabaikApiFactory factory)
         Assert.Equal(HttpStatusCode.OK, tokens.StatusCode);
         var initialTokens = await tokens.Content.ReadFromJsonAsync<JsonElement>();
         Assert.True(initialTokens.GetProperty("mustChangePassword").GetBoolean());
-        var initialUser = await TestUsers.ToUserAsync(factory, email, tokens);
+        var initialUser = TestUsers.ToUser(factory, email, initialTokens);
         var blocked = await initialUser.Client.GetAsync("/api/v1/home");
         Assert.Equal(HttpStatusCode.Forbidden, blocked.StatusCode);
         var blockedProblem = await blocked.Content.ReadFromJsonAsync<JsonElement>();
