@@ -3,7 +3,9 @@ using Labaik.Application.Common.Models;
 using Labaik.Domain.Common.Results;
 using Labaik.Domain.Identity;
 using Labaik.Application.Common.Authorization;
+using Labaik.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Security.Cryptography;
@@ -12,6 +14,7 @@ namespace Labaik.Infrastructure.Identity;
 
 internal sealed class IdentityService(
     UserManager<ApplicationUser> userManager,
+    AppDbContext context,
     IVerificationCodeService verificationCodeService,
     IRefreshTokenService refreshTokenService,
     IOptions<AdminSettings> adminOptions,
@@ -150,12 +153,29 @@ internal sealed class IdentityService(
         => Error.Failure(code, string.Join(" ", result.Errors.Select(e => e.Description)));
 
     // Every token issue (login, verify, Google, refresh) goes through here, so the bootstrap
-    // Admin grant takes effect without a restart.
-    private async Task<AuthUser> BuildAuthUserAsync(ApplicationUser user)
+    // Admin grant takes effect without a restart, and a suspended supervisor is refused.
+    private async Task<Result<AuthUser>> BuildAuthUserAsync(ApplicationUser user)
     {
         await EnsureBootstrapAdminAsync(user);
         var roles = await userManager.GetRolesAsync(user);
+        if (roles.Contains(Roles.Supervisor) && !roles.Contains(Roles.Admin) && await IsSuspendedEverywhereAsync(user.Id))
+        {
+            return Error.Forbidden("Supervisor.Suspended", "This supervisor account is suspended by its company.");
+        }
+
         return new AuthUser(user.Id, user.Email!, user.FullName, roles.ToList());
+    }
+
+    // On at least one company roster and suspended on all of them.
+    private async Task<bool> IsSuspendedEverywhereAsync(Guid userId)
+    {
+        var entries = await context.Companies
+            .AsNoTracking()
+            .SelectMany(c => c.Supervisors)
+            .Where(s => s.UserId == userId)
+            .Select(s => s.IsSuspended)
+            .ToListAsync();
+        return entries.Count > 0 && entries.All(suspended => suspended);
     }
 
     private async Task EnsureBootstrapAdminAsync(ApplicationUser user)
@@ -342,6 +362,27 @@ internal sealed class IdentityService(
                 user.Id, email, VerificationPurpose.PasswordReset, cancellationToken);
         }
         return Result.Success(); // always 200: no user enumeration
+    }
+
+    public async Task<Result<ProvisionedAccount>> IssueTemporaryPasswordAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var user = await userManager.FindByIdAsync(userId.ToString());
+        if (user is null)
+        {
+            return Error.NotFound("User.NotFound", "No account found.");
+        }
+
+        var temporaryPassword = GenerateTemporaryPassword();
+        var resetToken = await userManager.GeneratePasswordResetTokenAsync(user);
+        var reset = await userManager.ResetPasswordAsync(user, resetToken, temporaryPassword);
+        if (!reset.Succeeded)
+        {
+            return IdentityFailure("Auth.ResetFailed", reset);
+        }
+
+        await refreshTokenService.RevokeAllForUserAsync(user.Id, cancellationToken);
+        logger.LogInformation("Issued a new temporary password for user {UserId}.", user.Id);
+        return new ProvisionedAccount(user.Id, user.Email!, user.FullName, temporaryPassword);
     }
 
     public async Task<Result> ResetPasswordAsync(

@@ -190,6 +190,41 @@ public sealed class Company : AggregateRoot
 
     public bool HasSupervisor(Guid userId) => _supervisors.Any(s => s.UserId == userId);
 
+    // [leadsGroups]: the supervisor still leads one of this company's groups (reassign them first).
+    public Result RemoveSupervisor(Guid userId, bool leadsGroups)
+    {
+        var supervisor = _supervisors.FirstOrDefault(s => s.UserId == userId);
+        if (supervisor is null)
+        {
+            return Result.Failure(CompanyErrors.SupervisorNotOnRoster);
+        }
+
+        if (leadsGroups)
+        {
+            return Result.Failure(CompanyErrors.SupervisorLeadsGroups);
+        }
+
+        _supervisors.Remove(supervisor);
+        return Result.Success();
+    }
+
+    // Idempotent: suspending a suspended supervisor (or reactivating an active one) succeeds.
+    public Result SuspendSupervisor(Guid userId) => WithSupervisor(userId, s => s.Suspend());
+
+    public Result ReactivateSupervisor(Guid userId) => WithSupervisor(userId, s => s.Reactivate());
+
+    private Result WithSupervisor(Guid userId, Action<CompanySupervisor> change)
+    {
+        var supervisor = _supervisors.FirstOrDefault(s => s.UserId == userId);
+        if (supervisor is null)
+        {
+            return Result.Failure(CompanyErrors.SupervisorNotOnRoster);
+        }
+
+        change(supervisor);
+        return Result.Success();
+    }
+
     public void Stop() => IsStopped = true;
 
     public void Resume() => IsStopped = false;

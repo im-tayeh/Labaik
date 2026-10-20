@@ -4,6 +4,9 @@ using Labaik.Api.Extensions;
 using Labaik.Api.OpenApi;
 using Labaik.Application.Features.Announcements.Commands.PostCompanyAnnouncement;
 using Labaik.Application.Features.Companies.Commands.AddCompanySupervisor;
+using Labaik.Application.Features.Companies.Commands.IssueSupervisorTemporaryPassword;
+using Labaik.Application.Features.Companies.Commands.RemoveCompanySupervisor;
+using Labaik.Application.Features.Companies.Commands.SetCompanySupervisorSuspended;
 using Labaik.Application.Features.Companies.Commands.UpdateMyCompany;
 using Labaik.Application.Features.Companies.Queries.GetCompanyHome;
 using Labaik.Application.Features.Companies.Queries.GetCompanySupervisors;
@@ -90,6 +93,47 @@ public static class CompanyEndpoints
         .WithName("GetCompanySupervisors")
         .WithSummary("My supervisor roster, by name, with how many of my groups each supervises")
         .WithResponseExample(StatusCodes.Status200OK, CompanyExamples.Supervisors);
+
+        group.MapDelete("/supervisors/{userId:guid}", async (Guid userId, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new RemoveCompanySupervisorCommand(userId), ct);
+            return result.IsSuccess ? Results.NoContent() : result.Error!.ToProblem();
+        })
+        .WithName("RemoveCompanySupervisor")
+        .WithSummary("Take a supervisor off my roster (409 while they still lead one of my groups)")
+        .Produces(StatusCodes.Status204NoContent)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status409Conflict);
+
+        group.MapPost("/supervisors/{userId:guid}/disable", async (Guid userId, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new SetCompanySupervisorSuspendedCommand(userId, Suspended: true), ct);
+            return result.IsSuccess ? Results.NoContent() : result.Error!.ToProblem();
+        })
+        .WithName("SuspendCompanySupervisor")
+        .WithSummary("Suspend a supervisor on my roster (suspended everywhere: sign-in and refresh get 403 Supervisor.Suspended)")
+        .Produces(StatusCodes.Status204NoContent)
+        .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPost("/supervisors/{userId:guid}/enable", async (Guid userId, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new SetCompanySupervisorSuspendedCommand(userId, Suspended: false), ct);
+            return result.IsSuccess ? Results.NoContent() : result.Error!.ToProblem();
+        })
+        .WithName("ReactivateCompanySupervisor")
+        .WithSummary("Reactivate a suspended supervisor on my roster")
+        .Produces(StatusCodes.Status204NoContent)
+        .ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPost("/supervisors/{userId:guid}/temp-password", async (Guid userId, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new IssueSupervisorTemporaryPasswordCommand(userId), ct);
+            return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
+        })
+        .WithName("IssueSupervisorTemporaryPassword")
+        .WithSummary("New temporary password for a supervisor on my roster (emailed, returned once; old password and sessions stop working)")
+        .Produces<TemporaryPasswordDto>()
+        .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapPost("/announcements", async (PostCompanyAnnouncementCommand command, ISender sender, CancellationToken ct) =>
         {

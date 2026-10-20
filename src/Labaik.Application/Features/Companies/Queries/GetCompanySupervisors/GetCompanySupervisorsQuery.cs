@@ -29,7 +29,7 @@ public sealed class GetCompanySupervisorsQueryHandler(
             .AsNoTracking()
             .Where(c => c.Id == id)
             .SelectMany(c => c.Supervisors)
-            .Select(s => new { s.UserId, s.AddedAtUtc })
+            .Select(s => new { s.UserId, s.AddedAtUtc, s.IsSuspended })
             .ToListAsync(cancellationToken);
 
         var groupsBySupervisor = await context.Groups
@@ -43,7 +43,7 @@ public sealed class GetCompanySupervisorsQueryHandler(
         return roster
             .Select(s => contacts.TryGetValue(s.UserId, out var c)
                 ? new CompanySupervisorDto(s.UserId, c.FullName, c.Email ?? string.Empty, c.PhoneNumber,
-                    s.AddedAtUtc, groupsBySupervisor.GetValueOrDefault(s.UserId))
+                    s.AddedAtUtc, groupsBySupervisor.GetValueOrDefault(s.UserId), s.IsSuspended)
                 : null)
             .OfType<CompanySupervisorDto>()
             .OrderBy(s => s.FullName, StringComparer.OrdinalIgnoreCase)
