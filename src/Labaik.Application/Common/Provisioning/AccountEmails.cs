@@ -39,6 +39,21 @@ public static class AccountEmails
             """);
     }
 
+    // A new temporary password issued by the company (the previous one no longer works).
+    public static (string Subject, string Body) TemporaryPassword(ProvisionedAccount account, string companyName) =>
+        ("Your new Labaik temporary password",
+            $"""
+            Hello {account.FullName},
+
+            {companyName} issued a new temporary password for your Labaik account.
+
+            Sign in with:
+              Email: {account.Email}
+              Temporary password: {account.TemporaryPassword}
+
+            Your previous password no longer works. Please change this one after signing in.
+            """);
+
     // Email delivery must not undo a committed provisioning: failures are logged, not thrown.
     public static async Task<bool> TrySendAsync(
         this IEmailSender emailSender,

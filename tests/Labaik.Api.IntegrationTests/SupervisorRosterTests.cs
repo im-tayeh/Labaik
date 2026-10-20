@@ -70,4 +70,80 @@ public class SupervisorRosterTests(LabaikApiFactory factory)
         var roster = await company.Client.GetFromJsonAsync<JsonElement>("/api/v1/company/supervisors");
         Assert.Equal(1, Assert.Single(roster.EnumerateArray()).GetProperty("groupsCount").GetInt32());
     }
+
+    [Fact]
+    public async Task Company_issues_a_new_temporary_password_that_replaces_the_old_one()
+    {
+        var (company, _) = await TestUsers.CreateCompanyAsync(factory);
+        var email = $"sup-{Guid.NewGuid():N}@labaik.test";
+        var created = await company.Client.PostAsJsonAsync("/api/v1/company/supervisors", new { fullName = "Temp Pass", email });
+        var userId = (await created.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("userId").GetGuid();
+        var oldPassword = factory.Emails.TemporaryPasswordFor(email)!;
+
+        var issued = await company.Client.PostAsync($"/api/v1/company/supervisors/{userId}/temp-password", null);
+        Assert.Equal(HttpStatusCode.OK, issued.StatusCode);
+        var newPassword = (await issued.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("temporaryPassword").GetString()!;
+        Assert.Equal(newPassword, factory.Emails.TemporaryPasswordFor(email)); // emailed too
+        Assert.NotEqual(oldPassword, newPassword);
+
+        var anonymous = factory.CreateClient();
+        Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.PostAsJsonAsync("/api/v1/auth/login", new { email, password = oldPassword })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await anonymous.PostAsJsonAsync("/api/v1/auth/login", new { email, password = newPassword })).StatusCode);
+
+        var (other, _) = await TestUsers.CreateCompanyAsync(factory);
+        Assert.Equal(HttpStatusCode.NotFound, (await other.Client.PostAsync($"/api/v1/company/supervisors/{userId}/temp-password", null)).StatusCode);
+    }
+
+    [Fact]
+    public async Task Suspended_supervisor_cannot_sign_in_or_refresh_until_reactivated()
+    {
+        var (company, _) = await TestUsers.CreateCompanyAsync(factory);
+        var email = $"sup-{Guid.NewGuid():N}@labaik.test";
+        var created = await company.Client.PostAsJsonAsync("/api/v1/company/supervisors", new { fullName = "Suspend Me", email });
+        var userId = (await created.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("userId").GetGuid();
+        var supervisor = await TestUsers.SignInProvisionedAsync(factory, email);
+        var password = factory.Emails.TemporaryPasswordFor(email)!;
+        var anonymous = factory.CreateClient();
+
+        Assert.Equal(HttpStatusCode.NoContent, (await company.Client.PostAsync($"/api/v1/company/supervisors/{userId}/disable", null)).StatusCode);
+        var roster = await company.Client.GetFromJsonAsync<JsonElement>("/api/v1/company/supervisors");
+        Assert.True(Assert.Single(roster.EnumerateArray()).GetProperty("isSuspended").GetBoolean());
+
+        var login = await anonymous.PostAsJsonAsync("/api/v1/auth/login", new { email, password });
+        Assert.Equal(HttpStatusCode.Forbidden, login.StatusCode);
+        Assert.Equal("Supervisor.Suspended", (await login.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
+        var refresh = await anonymous.PostAsJsonAsync("/api/v1/auth/refresh-token", new { refreshToken = supervisor.RefreshToken });
+        Assert.NotEqual(HttpStatusCode.OK, refresh.StatusCode); // sessions revoked on suspension
+
+        Assert.Equal(HttpStatusCode.NoContent, (await company.Client.PostAsync($"/api/v1/company/supervisors/{userId}/enable", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await anonymous.PostAsJsonAsync("/api/v1/auth/login", new { email, password })).StatusCode);
+    }
+
+    [Fact]
+    public async Task Company_removes_a_supervisor_only_after_their_groups_are_reassigned()
+    {
+        var (company, _) = await TestUsers.CreateCompanyAsync(factory);
+        var supervisor = await TestUsers.CreateAsync(factory);
+        await TestUsers.AddToRosterAsync(company, supervisor);
+        var groupId = await CompanyGroupTests.CreateTripGroupAsync(company);
+        Assert.Equal(HttpStatusCode.OK, (await company.Client.PutAsJsonAsync($"/api/v1/company/groups/{groupId}/supervisor", new { email = supervisor.Email })).StatusCode);
+
+        var blocked = await company.Client.DeleteAsync($"/api/v1/company/supervisors/{supervisor.Id}");
+        Assert.Equal(HttpStatusCode.Conflict, blocked.StatusCode);
+        Assert.Equal("Company.SupervisorLeadsGroups", (await blocked.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
+
+        var replacement = await TestUsers.CreateAsync(factory);
+        await TestUsers.AddToRosterAsync(company, replacement);
+        Assert.Equal(HttpStatusCode.OK, (await company.Client.PutAsJsonAsync($"/api/v1/company/groups/{groupId}/supervisor", new { email = replacement.Email })).StatusCode);
+
+        Assert.Equal(HttpStatusCode.NoContent, (await company.Client.DeleteAsync($"/api/v1/company/supervisors/{supervisor.Id}")).StatusCode);
+        var roster = await company.Client.GetFromJsonAsync<JsonElement>("/api/v1/company/supervisors");
+        Assert.Equal(replacement.Email, Assert.Single(roster.EnumerateArray()).GetProperty("email").GetString());
+        Assert.Equal(HttpStatusCode.NotFound, (await company.Client.DeleteAsync($"/api/v1/company/supervisors/{supervisor.Id}")).StatusCode);
+
+        // Off every roster: the Supervisor role is gone from the next token.
+        var refreshed = await TestUsers.RefreshAsync(factory, supervisor);
+        var me = await refreshed.Client.GetFromJsonAsync<JsonElement>("/api/v1/auth/me");
+        Assert.DoesNotContain("Supervisor", me.GetProperty("roles").EnumerateArray().Select(r => r.GetString()));
+    }
 }
