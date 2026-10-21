@@ -124,7 +124,7 @@ public class SupervisorRosterTests(LabaikApiFactory factory)
         var created = await company.Client.PostAsJsonAsync("/api/v1/company/supervisors", new { fullName = "Suspend Me", email });
         var userId = (await created.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("userId").GetGuid();
         var supervisor = await TestUsers.SignInProvisionedAsync(factory, email);
-        var password = factory.Emails.TemporaryPasswordFor(email)!;
+        var password = TestUsers.Password; // SignInProvisionedAsync completes the required password change.
         var anonymous = factory.CreateClient();
 
         Assert.Equal(HttpStatusCode.NoContent, (await company.Client.PostAsync($"/api/v1/company/supervisors/{userId}/disable", null)).StatusCode);

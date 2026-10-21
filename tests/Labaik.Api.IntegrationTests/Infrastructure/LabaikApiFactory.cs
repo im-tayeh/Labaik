@@ -62,10 +62,15 @@ public sealed class ApiCollection : ICollectionFixture<LabaikApiFactory>
 public sealed partial class CapturingEmailSender : IEmailSender
 {
     private readonly ConcurrentDictionary<string, string> _lastBodyByRecipient = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, string> _lastTemporaryPasswordByRecipient = new(StringComparer.OrdinalIgnoreCase);
 
     public Task SendAsync(string to, string subject, string body, CancellationToken cancellationToken = default)
     {
         _lastBodyByRecipient[to] = body;
+        if (TemporaryPassword().Match(body) is { Success: true } match)
+        {
+            _lastTemporaryPasswordByRecipient[to] = match.Groups[1].Value;
+        }
         return Task.CompletedTask;
     }
 
@@ -86,6 +91,10 @@ public sealed partial class CapturingEmailSender : IEmailSender
     // Temporary password from a provisioning email (null when the email carried none).
     public string? TemporaryPasswordFor(string email) =>
         TemporaryPassword().Match(LastBodyFor(email)) is { Success: true } m ? m.Groups[1].Value : null;
+
+    // Keep credentials from provisioning emails even if a later notice or OTP replaces the last body.
+    public string? ProvisionedTemporaryPasswordFor(string email) =>
+        _lastTemporaryPasswordByRecipient.TryGetValue(email, out var password) ? password : null;
 
     [GeneratedRegex(@"\b\d{6}\b")]
     private static partial Regex SixDigits();

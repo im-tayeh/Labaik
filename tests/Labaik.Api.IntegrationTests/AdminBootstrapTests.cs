@@ -29,14 +29,14 @@ public class AdminBootstrapTests(LabaikApiFactory factory)
     [Fact]
     public async Task Reseeding_keeps_the_existing_admin_password()
     {
-        var password = factory.Emails.TemporaryPasswordFor(LabaikApiFactory.AdminEmail);
+        var password = factory.Emails.ProvisionedTemporaryPasswordFor(LabaikApiFactory.AdminEmail);
 
         using (var scope = factory.Services.CreateScope())
         {
             await AdminAccountSeeder.SeedAsync(scope.ServiceProvider, NullLogger.Instance);
         }
 
-        Assert.Equal(password, factory.Emails.TemporaryPasswordFor(LabaikApiFactory.AdminEmail));
+        Assert.Equal(password, factory.Emails.ProvisionedTemporaryPasswordFor(LabaikApiFactory.AdminEmail));
         var login = await factory.CreateClient().PostAsJsonAsync("/api/v1/auth/login",
             new { email = LabaikApiFactory.AdminEmail, password });
         if (login.StatusCode == HttpStatusCode.Unauthorized)

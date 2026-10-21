@@ -84,7 +84,7 @@ public static class TestUsers
     public static async Task<TestUser> SignInProvisionedAsync(
         LabaikApiFactory factory, string email, bool completeRequiredPasswordChange = true)
     {
-        var password = factory.Emails.TemporaryPasswordFor(email)
+        var password = factory.Emails.ProvisionedTemporaryPasswordFor(email)
             ?? throw new InvalidOperationException($"No temporary password was emailed to {email}.");
         var anonymous = factory.CreateClient();
         var login = await anonymous.PostAsJsonAsync("/api/v1/auth/login", new { email, password });
