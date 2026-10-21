@@ -29,5 +29,8 @@ public interface IIdentityService
     Task<Result<UserAccountDto>> RemoveFromRoleAsync(Guid userId, string role, CancellationToken cancellationToken = default);
     // Replaces the password with a new temporary one and revokes the account's sessions.
     Task<Result<ProvisionedAccount>> IssueTemporaryPasswordAccountAsync(Guid userId, CancellationToken cancellationToken = default);
+    // Null while the user may keep using the API; else why not (Auth.AccountDisabled, Company.Stopped,
+    // Company.Expired, Supervisor.Suspended) — the same checks login and refresh run.
+    Task<Error?> GetAccessBlockAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<Result> ResetPasswordAsync(string email, string code, string newPassword, CancellationToken cancellationToken = default);
 }

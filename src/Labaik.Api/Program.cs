@@ -1,4 +1,4 @@
-using Labaik.Api.Endpoints;
+﻿using Labaik.Api.Endpoints;
 using Labaik.Api.Extensions;
 using Labaik.Api.Handlers;
 using Labaik.Api.Middleware;
@@ -126,6 +126,9 @@ try
 
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<ICurrentUser, CurrentUser>();
+    builder.Services.AddMemoryCache();
+    builder.Services.AddSingleton<AccountAccessCache>();
+    builder.Services.AddSingleton<IAccountAccessCache>(sp => sp.GetRequiredService<AccountAccessCache>());
 
     builder.Services.AddSignalR();
     builder.Services.AddScoped<ILocationBroadcaster, SignalRLocationBroadcaster>();
@@ -166,6 +169,7 @@ try
 
     app.UseCors("Dashboard");
     app.UseAuthentication();
+    app.UseMiddleware<AccountBlockMiddleware>();
     app.UseMiddleware<PasswordChangeRequiredMiddleware>();
     app.UseAuthorization();
 

@@ -20,7 +20,8 @@ internal sealed class IdentityService(
     IOptions<AdminSettings> adminOptions,
     ILogger<IdentityService> logger,
     IAppDbContext context,
-    TimeProvider timeProvider) : IIdentityService
+    TimeProvider timeProvider,
+    IAccountAccessCache accessCache) : IIdentityService
 {
     public async Task<Result<Guid>> CreateUserAsync(string fullName, string email, string password, CancellationToken cancellationToken = default)
     {
@@ -164,16 +165,34 @@ internal sealed class IdentityService(
         }
         await EnsureBootstrapAdminAsync(user);
         var roles = await userManager.GetRolesAsync(user);
-        if (!roles.Contains(Roles.Admin))
+        var block = await GetRoleBlockAsync(user.Id, roles);
+        if (block is not null) return block;
+        return new AuthUser(user.Id, user.Email!, user.FullName, roles.ToList(), user.MustChangePassword);
+    }
+
+    // Same checks as token issue, for a token that is already out (AccountBlockMiddleware):
+    // a stopped company, a suspended supervisor or a disabled account lose access on the next request.
+    public async Task<Error?> GetAccessBlockAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var user = await userManager.FindByIdAsync(userId.ToString());
+        if (user is null) return null;
+        if (await userManager.IsLockedOutAsync(user))
         {
-            var block = await GetCompanyBlockAsync(user.Id, roles);
-            if (block is not null) return block;
+            return Error.Forbidden("Auth.AccountDisabled", "This account is disabled.");
         }
-        if (roles.Contains(Roles.Supervisor) && !roles.Contains(Roles.Admin) && await IsSuspendedEverywhereAsync(user.Id))
+        return await GetRoleBlockAsync(user.Id, await userManager.GetRolesAsync(user));
+    }
+
+    private async Task<Error?> GetRoleBlockAsync(Guid userId, IList<string> roles)
+    {
+        if (roles.Contains(Roles.Admin)) return null;
+        var block = await GetCompanyBlockAsync(userId, roles);
+        if (block is not null) return block;
+        if (roles.Contains(Roles.Supervisor) && await IsSuspendedEverywhereAsync(userId))
         {
             return Error.Forbidden("Supervisor.Suspended", "This supervisor account is suspended by its company.");
         }
-        return new AuthUser(user.Id, user.Email!, user.FullName, roles.ToList(), user.MustChangePassword);
+        return null;
     }
 
     private async Task<Error?> GetCompanyBlockAsync(Guid userId, IList<string> roles)
@@ -445,6 +464,7 @@ internal sealed class IdentityService(
         var updated = await userManager.SetLockoutEndDateAsync(user, disabled ? DateTimeOffset.MaxValue : null);
         if (!updated.Succeeded) return Result.Failure(IdentityFailure("Auth.AccountDisabled", updated));
         if (disabled) await refreshTokenService.RevokeAllForUserAsync(user.Id, cancellationToken);
+        accessCache.Reset();
         return Result.Success();
     }
 
