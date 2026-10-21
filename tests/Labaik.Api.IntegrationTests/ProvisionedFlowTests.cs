@@ -73,14 +73,16 @@ public class ProvisionedFlowTests(LabaikApiFactory factory)
         Assert.Equal(HttpStatusCode.NoContent,
             (await pilgrim.Client.PostAsync($"/api/v1/announcements/{groupPost.GetProperty("id").GetGuid()}/read", null)).StatusCode);
 
-        // Group chat between pilgrim and supervisor; the company account is not a group member.
+        // Group chat between pilgrim and supervisor; the owning company reads it (read only).
         await OkJsonAsync(await pilgrim.Client.PostAsJsonAsync($"/api/v1/groups/{groupId}/messages",
             new { body = "Salam, I am at the hotel" }), HttpStatusCode.Created);
         await OkJsonAsync(await supervisor.Client.PostAsJsonAsync($"/api/v1/groups/{groupId}/messages",
             new { body = "Wa alaikum salam, see you at 6" }), HttpStatusCode.Created);
         var messages = (await pilgrim.Client.GetFromJsonAsync<JsonElement>($"/api/v1/groups/{groupId}/messages")).EnumerateArray().ToList();
         Assert.Equal(2, messages.Count);
-        Assert.Equal(HttpStatusCode.NotFound, (await company.Client.GetAsync($"/api/v1/groups/{groupId}/messages")).StatusCode);
+        Assert.Equal(2, (await company.Client.GetFromJsonAsync<JsonElement>($"/api/v1/groups/{groupId}/messages")).GetArrayLength());
+        Assert.Equal(HttpStatusCode.NotFound, (await company.Client.PostAsJsonAsync($"/api/v1/groups/{groupId}/messages",
+            new { body = "Company cannot post" })).StatusCode);
 
         // Notifications for each role.
         var pilgrimTypes = await NotificationTypesAsync(pilgrim);

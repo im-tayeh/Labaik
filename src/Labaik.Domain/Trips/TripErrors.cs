@@ -59,4 +59,7 @@ public static class TripErrors
 
     public static Error NotFound =>
         Error.NotFound("Trip.NotFound", "The trip was not found.");
+
+    public static Error HasPilgrims =>
+        Error.Conflict("Trip.HasPilgrims", "Remove the pilgrims from this trip's groups before deleting it.");
 }

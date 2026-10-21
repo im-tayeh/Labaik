@@ -303,6 +303,7 @@ in T13 is the core of it. Build the rest of F after A if time is tight.
 - Domain: `Trip` aggregate owned by `Company`: `Name`, `PilgrimageType`, `Destinations`, `DepartureDate`, `ReturnDate?`, `DeparturePlace`, `ExpectedPilgrims`, `Notes?`; computed `TripStatus` (1 Upcoming / 2 Departed).
 - `POST /company/trips`, `GET /company/trips` (list), `GET /company/trips/{id}` (details), `PUT /company/trips/{id}`.
 - _Done:_ `Trip` aggregate (separate from `Journey`; `CompanyId` FK, `Destinations` as `text[]`, `DepartureDate`/`ReturnDate` as `DateOnly` "yyyy-MM-dd", atomic `Update`, `TripCreated` event); status computed via `StatusOn(todayUtc)` (Departed once today ≥ departure); shared `ITripFields` + `TripFieldsValidator<T>` for create/update; other companies' trips -> 404; migration `AddTrips`.
+- _Done (22 Oct 2026):_ `DELETE /company/trips/{id}` (204) deletes the trip with its empty groups (their chat and announcements); 409 `Trip.HasPilgrims` while any of its groups has pilgrims; other companies' trips -> 404. Notification types 16 `SupervisorSuspended` / 17 `SupervisorReactivated` go to the company owner (preview = supervisor name) and the supervisor (preview = company name) when the company suspends or reactivates them (skipped when InstantNotifications is off).
 
 **T15 — Company-managed groups**
 - Domain: `Group` gains `CompanyId` + `TripId`.

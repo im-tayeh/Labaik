@@ -25,6 +25,7 @@ using Labaik.Application.Features.Groups.Queries.GetTripGroups;
 using Labaik.Application.Features.Groups.Queries.GetCompanyGroups;
 using Labaik.Application.Features.Groups.Dtos;
 using Labaik.Application.Features.Trips.Commands.CreateTrip;
+using Labaik.Application.Features.Trips.Commands.DeleteTrip;
 using Labaik.Application.Features.Trips.Commands.UpdateTrip;
 using Labaik.Application.Features.Trips.Queries.GetCompanyTripById;
 using Labaik.Application.Features.Trips.Queries.GetCompanyTrips;
@@ -229,6 +230,17 @@ public static class CompanyEndpoints
         .WithResponseExample(StatusCodes.Status200OK, CompanyExamples.Trip)
         .ProducesProblem(StatusCodes.Status404NotFound)
         .ProducesValidationProblem(StatusCodes.Status422UnprocessableEntity);
+
+        group.MapDelete("/trips/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new DeleteTripCommand(id), ct);
+            return result.IsSuccess ? Results.NoContent() : result.Error!.ToProblem();
+        })
+        .WithName("DeleteTrip")
+        .WithSummary("Delete a trip and its empty groups (409 Trip.HasPilgrims while a group has pilgrims)")
+        .Produces(StatusCodes.Status204NoContent)
+        .ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status409Conflict);
 
         group.MapPost("/trips/{tripId:guid}/groups", async (Guid tripId, CreateTripGroupRequest body, ISender sender, CancellationToken ct) =>
         {
