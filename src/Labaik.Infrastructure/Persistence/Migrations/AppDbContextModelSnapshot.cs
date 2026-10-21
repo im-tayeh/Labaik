@@ -1228,6 +1228,9 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                             b1.Property<Guid?>("ProvisionedByCompanyId")
                                 .HasColumnType("uuid");
 
+                            b1.Property<bool>("IsSuspended")
+                                .HasColumnType("boolean");
+
                             b1.Property<Guid>("UserId")
                                 .HasColumnType("uuid");
 

@@ -99,6 +99,28 @@ public class CompanyTests
     }
 
     [Fact]
+    public void Roster_supervisor_can_be_suspended_reactivated_and_removed_unless_leading_groups()
+    {
+        var company = NewCompany(Guid.NewGuid());
+        var supervisor = Guid.NewGuid();
+        company.AddSupervisor(supervisor, Now);
+
+        Assert.True(company.SuspendSupervisor(supervisor).IsSuccess);
+        Assert.True(company.SuspendSupervisor(supervisor).IsSuccess); // idempotent
+        Assert.True(Assert.Single(company.Supervisors).IsSuspended);
+        Assert.True(company.ReactivateSupervisor(supervisor).IsSuccess);
+        Assert.False(Assert.Single(company.Supervisors).IsSuspended);
+
+        Assert.Equal("Company.SupervisorNotOnRoster", company.SuspendSupervisor(Guid.NewGuid()).Error!.Code);
+        Assert.Equal("Company.SupervisorNotOnRoster", company.RemoveSupervisor(Guid.NewGuid(), leadsGroups: false).Error!.Code);
+        Assert.Equal("Company.SupervisorLeadsGroups", company.RemoveSupervisor(supervisor, leadsGroups: true).Error!.Code);
+        Assert.Single(company.Supervisors);
+
+        Assert.True(company.RemoveSupervisor(supervisor, leadsGroups: false).IsSuccess);
+        Assert.Empty(company.Supervisors);
+    }
+
+    [Fact]
     public void Status_and_days_remaining_follow_the_contract_and_stop_flag()
     {
         var company = Company.Create(Details() with { ContractEndDate = Today.AddDays(10) }, Guid.NewGuid(), Now).Value;

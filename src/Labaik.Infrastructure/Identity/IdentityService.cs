@@ -155,7 +155,7 @@ internal sealed class IdentityService(
         => Error.Failure(code, string.Join(" ", result.Errors.Select(e => e.Description)));
 
     // Every token issue (login, verify, Google, refresh) goes through here, so the bootstrap
-    // Admin grant takes effect without a restart.
+    // Admin grant takes effect without a restart, and a supervisor suspended everywhere is refused.
     private async Task<Result<AuthUser>> BuildAuthUserAsync(ApplicationUser user)
     {
         if (await userManager.IsLockedOutAsync(user))
@@ -168,6 +168,10 @@ internal sealed class IdentityService(
         {
             var block = await GetCompanyBlockAsync(user.Id, roles);
             if (block is not null) return block;
+        }
+        if (roles.Contains(Roles.Supervisor) && !roles.Contains(Roles.Admin) && await IsSuspendedEverywhereAsync(user.Id))
+        {
+            return Error.Forbidden("Supervisor.Suspended", "This supervisor account is suspended by its company.");
         }
         return new AuthUser(user.Id, user.Email!, user.FullName, roles.ToList(), user.MustChangePassword);
     }
@@ -196,6 +200,15 @@ internal sealed class IdentityService(
                 return statuses.All(s => s == CompanyStatus.Expired) ? CompanyErrors.Expired : CompanyErrors.Stopped;
         }
         return null;
+    }
+
+    private async Task<bool> IsSuspendedEverywhereAsync(Guid userId)
+    {
+        var entries = await context.Companies.AsNoTracking()
+            .SelectMany(c => c.Supervisors)
+            .Where(s => s.UserId == userId)
+            .Select(s => s.IsSuspended).ToListAsync();
+        return entries.Count > 0 && entries.All(suspended => suspended);
     }
 
     private async Task EnsureBootstrapAdminAsync(ApplicationUser user)
@@ -413,6 +426,15 @@ internal sealed class IdentityService(
         if (!updated.Succeeded) return IdentityFailure("User.PasswordResetFailed", updated);
         await refreshTokenService.RevokeAllForUserAsync(user.Id, cancellationToken);
         return password;
+    }
+
+    public async Task<Result<ProvisionedAccount>> IssueTemporaryPasswordAccountAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var password = await IssueTemporaryPasswordAsync(userId, cancellationToken);
+        if (password.IsFailure) return password.Error!;
+        var user = await userManager.FindByIdAsync(userId.ToString());
+        if (user is null) return Error.NotFound("User.NotFound", "No account found.");
+        return new ProvisionedAccount(user.Id, user.Email!, user.FullName, password.Value);
     }
 
     public async Task<Result> SetDisabledAsync(Guid userId, bool disabled, CancellationToken cancellationToken = default)

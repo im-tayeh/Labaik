@@ -20,13 +20,15 @@ public sealed record CompanyDto(
     string? SupportEmail = null);
 
 // A supervisor on the company's roster. GroupsCount = the company's groups they currently supervise.
+// IsSuspended = the company suspended them (they cannot sign in if every company they are on did).
 public sealed record CompanySupervisorDto(
     Guid UserId,
     string FullName,
     string Email,
     string? PhoneNumber,
     DateTimeOffset AddedAtUtc,
-    int GroupsCount);
+    int GroupsCount,
+    bool IsSuspended = false);
 
 public sealed record CompanyServicesDto(
     bool GpsTracking,

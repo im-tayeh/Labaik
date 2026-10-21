@@ -27,5 +27,7 @@ public interface IIdentityService
     Task<Result> SetDisabledAsync(Guid userId, bool disabled, CancellationToken cancellationToken = default);
     Task<Result<UserAccountDto>> AddToRoleAsync(Guid userId, string role, CancellationToken cancellationToken = default);
     Task<Result<UserAccountDto>> RemoveFromRoleAsync(Guid userId, string role, CancellationToken cancellationToken = default);
+    // Replaces the password with a new temporary one and revokes the account's sessions.
+    Task<Result<ProvisionedAccount>> IssueTemporaryPasswordAccountAsync(Guid userId, CancellationToken cancellationToken = default);
     Task<Result> ResetPasswordAsync(string email, string code, string newPassword, CancellationToken cancellationToken = default);
 }

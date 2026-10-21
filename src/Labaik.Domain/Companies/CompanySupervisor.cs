@@ -8,6 +8,7 @@ public sealed class CompanySupervisor : Entity
     public Guid UserId { get; private set; }
     public DateTimeOffset AddedAtUtc { get; private set; }
     public Guid? ProvisionedByCompanyId { get; private set; }
+    public bool IsSuspended { get; private set; }
 
     private CompanySupervisor() { } // EF
 
@@ -17,4 +18,7 @@ public sealed class CompanySupervisor : Entity
         AddedAtUtc = addedAtUtc;
         ProvisionedByCompanyId = provisionedByCompanyId;
     }
+
+    internal void Suspend() => IsSuspended = true;
+    internal void Reactivate() => IsSuspended = false;
 }

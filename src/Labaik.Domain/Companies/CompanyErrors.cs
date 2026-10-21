@@ -59,6 +59,12 @@ public static class CompanyErrors
     public static Error SupervisorAlreadyAdded =>
         Error.Conflict("Company.SupervisorAlreadyAdded", "This account is already one of the company's supervisors.");
 
+    public static Error SupervisorNotOnRoster =>
+        Error.NotFound("Company.SupervisorNotOnRoster", "This account is not one of the company's supervisors.");
+
+    public static Error SupervisorLeadsGroups =>
+        Error.Conflict("Company.SupervisorLeadsGroups", "The supervisor still leads groups of this company. Reassign them first.");
+
     public static Error SupervisorNotFound =>
         Error.NotFound("Company.SupervisorNotFound", "No supervisor with this email on the company's roster.");
 

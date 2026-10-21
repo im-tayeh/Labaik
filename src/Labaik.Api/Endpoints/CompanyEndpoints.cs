@@ -6,6 +6,8 @@ using Labaik.Application.Features.Announcements.Commands.PostCompanyAnnouncement
 using Labaik.Application.Features.Companies.Commands.AddCompanySupervisor;
 using Labaik.Application.Features.Companies.Commands.IssueSupervisorTempPassword;
 using Labaik.Application.Common.Provisioning;
+using Labaik.Application.Features.Companies.Commands.RemoveCompanySupervisor;
+using Labaik.Application.Features.Companies.Commands.SetCompanySupervisorSuspended;
 using Labaik.Application.Features.Companies.Commands.UpdateMyCompany;
 using Labaik.Application.Features.Companies.Queries.GetCompanyHome;
 using Labaik.Application.Features.Companies.Queries.GetCompanySupervisors;
@@ -142,6 +144,34 @@ public static class CompanyEndpoints
         .WithName("GetCompanyPilgrims")
         .WithSummary("Every pilgrim in my groups (distinct), with the groups they are in; search by name or email")
         .Returns<IReadOnlyList<CompanyPilgrimDto>>().Fails(401, 403).Validates();
+
+        group.MapDelete("/supervisors/{userId:guid}", async (Guid userId, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new RemoveCompanySupervisorCommand(userId), ct);
+            return result.IsSuccess ? Results.NoContent() : result.Error!.ToProblem();
+        })
+        .WithName("RemoveCompanySupervisor")
+        .WithSummary("Take a supervisor off my roster (409 while they still lead one of my groups)")
+        .Produces(StatusCodes.Status204NoContent).ProducesProblem(StatusCodes.Status404NotFound)
+        .ProducesProblem(StatusCodes.Status409Conflict);
+
+        group.MapPost("/supervisors/{userId:guid}/disable", async (Guid userId, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new SetCompanySupervisorSuspendedCommand(userId, Suspended: true), ct);
+            return result.IsSuccess ? Results.NoContent() : result.Error!.ToProblem();
+        })
+        .WithName("SuspendCompanySupervisor")
+        .WithSummary("Suspend a supervisor on my roster; suspension everywhere blocks sign-in and refresh")
+        .Produces(StatusCodes.Status204NoContent).ProducesProblem(StatusCodes.Status404NotFound);
+
+        group.MapPost("/supervisors/{userId:guid}/enable", async (Guid userId, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new SetCompanySupervisorSuspendedCommand(userId, Suspended: false), ct);
+            return result.IsSuccess ? Results.NoContent() : result.Error!.ToProblem();
+        })
+        .WithName("ReactivateCompanySupervisor")
+        .WithSummary("Reactivate a suspended supervisor on my roster")
+        .Produces(StatusCodes.Status204NoContent).ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapPost("/announcements", async (PostCompanyAnnouncementCommand command, ISender sender, CancellationToken ct) =>
         {
