@@ -15,6 +15,7 @@ internal sealed class GroupConfiguration : IEntityTypeConfiguration<Group>
         builder.HasKey(g => g.Id);
         builder.Property(g => g.Name).HasMaxLength(100).IsRequired();
         builder.Property(g => g.JoinCode).HasMaxLength(20).IsRequired();
+        builder.Property(g => g.Notes).HasMaxLength(Group.NotesMaxLength);
         builder.HasIndex(g => g.JoinCode).IsUnique(); // enforce uniqueness at the DB level
 
         // Gathering point: value object in the group row (all columns null until set).

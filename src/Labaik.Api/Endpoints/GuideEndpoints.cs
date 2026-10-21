@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Asp.Versioning.Builder;
 using Labaik.Api.Extensions;
+using Labaik.Domain.Companies;
 using Labaik.Application.Features.Guides.Dtos;
 using Labaik.Api.OpenApi;
 using Labaik.Application.Features.Guides.Queries.GetGuideArticleById;
@@ -20,7 +21,8 @@ public static class GuideEndpoints
             .MapGroup("/api/v{version:apiVersion}/guides")
             .WithApiVersionSet(versionSet)
             .WithTags("Guides")
-            .RequireAuthorization();
+            .RequireAuthorization()
+            .RequireCompanyService(s => s.DuaAndRituals);
 
         group.MapGet("/", async (ISender sender, CancellationToken ct, GuideCategory category = GuideCategory.IhramPreparation) =>
         {

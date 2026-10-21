@@ -13,6 +13,10 @@ internal sealed class SignalRRealtimeNotifier(
         => SafeSendAsync("MessageReceived", () =>
             hubContext.Clients.Group(GroupSubscribedHub.GroupName(groupId)).SendAsync("MessageReceived", message, cancellationToken));
 
+    public Task ChatMessageDeletedAsync(Guid groupId, Guid messageId, CancellationToken cancellationToken = default)
+        => SafeSendAsync("MessageDeleted", () =>
+            hubContext.Clients.Group(GroupSubscribedHub.GroupName(groupId)).SendAsync("MessageDeleted", messageId, cancellationToken));
+
     public Task NotificationCreatedAsync(Guid userId, NotificationDto notification, CancellationToken cancellationToken = default)
         => SafeSendAsync("NotificationReceived", () =>
             hubContext.Clients.User(userId.ToString()).SendAsync("NotificationReceived", notification, cancellationToken));

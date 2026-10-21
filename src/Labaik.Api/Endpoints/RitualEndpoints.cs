@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Asp.Versioning.Builder;
 using Labaik.Api.Extensions;
+using Labaik.Domain.Companies;
 using Labaik.Application.Features.Rituals.Dtos;
 using Labaik.Api.OpenApi;
 using Labaik.Application.Features.Rituals.Commands.CompleteRitualStep;
@@ -23,7 +24,8 @@ public static class RitualEndpoints
             .MapGroup("/api/v{version:apiVersion}/rituals")
             .WithApiVersionSet(versionSet)
             .WithTags("Rituals")
-            .RequireAuthorization();
+            .RequireAuthorization()
+            .RequireCompanyService(s => s.DuaAndRituals);
 
         group.MapGet("/steps", async (ISender sender, CancellationToken ct, PilgrimageType pilgrimageType = PilgrimageType.Umrah) =>
         {

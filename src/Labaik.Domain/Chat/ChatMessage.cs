@@ -22,6 +22,8 @@ public sealed class ChatMessage : AggregateRoot
     public double? Latitude { get; private set; }
     public double? Longitude { get; private set; }
     public DateTimeOffset SentAtUtc { get; private set; }
+    public DateTimeOffset? DeletedAtUtc { get; private set; }
+    public Guid? DeletedBy { get; private set; }
 
     private ChatMessage() { } // EF
 
@@ -65,5 +67,11 @@ public sealed class ChatMessage : AggregateRoot
             default:
                 return ChatErrors.InvalidKind;
         }
+    }
+
+    internal void Delete(Guid byUserId, DateTimeOffset nowUtc)
+    {
+        DeletedAtUtc ??= nowUtc;
+        DeletedBy ??= byUserId;
     }
 }

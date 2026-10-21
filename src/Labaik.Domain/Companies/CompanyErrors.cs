@@ -62,6 +62,13 @@ public static class CompanyErrors
     public static Error SupervisorNotFound =>
         Error.NotFound("Company.SupervisorNotFound", "No supervisor with this email on the company's roster.");
 
+    public static Error SupervisorNotOwnedByCompany =>
+        Error.Forbidden("Company.SupervisorNotOwnedByCompany", "This account is shared with others; the user must reset their own password.");
+
     public static Error NotFoundById =>
         Error.NotFound("Company.NotFound", "Company not found.");
+
+    public static Error Stopped => Error.Forbidden("Company.Stopped", "The company account is stopped.");
+    public static Error Expired => Error.Forbidden("Company.Expired", "The company subscription has expired.");
+    public static Error LimitReached => Error.Conflict("Company.LimitReached", "The company has reached its plan limit.");
 }

@@ -9,6 +9,28 @@ namespace Labaik.Api.IntegrationTests;
 public class SupervisorRosterTests(LabaikApiFactory factory)
 {
     [Fact]
+    public async Task Company_cannot_issue_temporary_password_for_another_company_owner_or_admin()
+    {
+        var (companyA, _) = await TestUsers.CreateCompanyAsync(factory);
+        var (companyB, _) = await TestUsers.CreateCompanyAsync(factory);
+        var admin = await TestUsers.GetAdminAsync(factory);
+
+        foreach (var protectedUser in new[] { companyB, admin })
+        {
+            var added = await companyA.Client.PostAsJsonAsync("/api/v1/company/supervisors",
+                new { fullName = "Linked Account", email = protectedUser.Email });
+            Assert.Equal(HttpStatusCode.Created, added.StatusCode);
+            var dto = await added.Content.ReadFromJsonAsync<JsonElement>();
+            var userId = dto.GetProperty("userId").GetGuid();
+
+            var response = await companyA.Client.PostAsync($"/api/v1/company/supervisors/{userId}/temp-password", null);
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+            var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+            Assert.Equal("Company.SupervisorNotOwnedByCompany", problem.GetProperty("code").GetString());
+        }
+    }
+
+    [Fact]
     public async Task Company_provisions_a_supervisor_who_signs_in_with_the_emailed_temporary_password()
     {
         var (company, _) = await TestUsers.CreateCompanyAsync(factory);

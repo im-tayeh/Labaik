@@ -109,17 +109,17 @@ internal static class CompanyNotifier
         DateTimeOffset nowUtc,
         CancellationToken cancellationToken)
     {
-        var ownerId = await context.Companies
+        var company = await context.Companies.AsNoTracking()
             .Where(c => c.Id == companyId)
-            .Select(c => (Guid?)c.OwnerUserId)
+            .Select(c => new { c.OwnerUserId, c.EnabledServices.InstantNotifications })
             .FirstOrDefaultAsync(cancellationToken);
-        if (ownerId is null)
+        if (company is null || !company.InstantNotifications)
         {
             return;
         }
 
         await NotificationWriter.CreateAndPushAsync(
-            context, notifier, [ownerId.Value], type, groupId, referenceId, preview, nowUtc, cancellationToken);
+            context, notifier, [company.OwnerUserId], type, groupId, referenceId, preview, nowUtc, cancellationToken);
     }
 
     public static Task<string?> GroupNameAsync(IAppDbContext context, Guid groupId, CancellationToken cancellationToken)

@@ -12,10 +12,10 @@ using Microsoft.EntityFrameworkCore;
 namespace Labaik.Application.Features.Groups.Commands.CreateTripGroup;
 
 // HTTP body; the trip comes from the route.
-public sealed record CreateTripGroupRequest(string Name);
+public sealed record CreateTripGroupRequest(string Name, string? Notes = null, int? Capacity = null);
 
 // A company creates a group under one of its trips; it starts without a supervisor.
-public sealed record CreateTripGroupCommand(Guid TripId, string Name) : IRequest<Result<CompanyGroupDto>>;
+public sealed record CreateTripGroupCommand(Guid TripId, string Name, string? Notes = null, int? Capacity = null) : IRequest<Result<CompanyGroupDto>>;
 
 public sealed class CreateTripGroupCommandValidator : AbstractValidator<CreateTripGroupCommand>
 {
@@ -23,6 +23,8 @@ public sealed class CreateTripGroupCommandValidator : AbstractValidator<CreateTr
     {
         RuleFor(x => x.TripId).NotEmpty();
         RuleFor(x => x.Name).NotEmpty().MaximumLength(GroupErrors.NameMaxLength);
+        RuleFor(x => x.Notes).MaximumLength(Group.NotesMaxLength);
+        RuleFor(x => x.Capacity).GreaterThan(0).When(x => x.Capacity.HasValue);
     }
 }
 
@@ -54,6 +56,9 @@ public sealed class CreateTripGroupCommandHandler(
         {
             return create.Error!;
         }
+
+        var details = create.Value.UpdateDetails(request.Name, request.Notes, request.Capacity);
+        if (details.IsFailure) return details.Error!;
 
         context.Groups.Add(create.Value);
         await context.SaveChangesAsync(cancellationToken);

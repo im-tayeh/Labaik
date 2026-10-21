@@ -35,9 +35,13 @@ public sealed class GetChatMessagesQueryHandler(
             .SelectMany(g => g.Members.Where(m => m.UserId == userId))
             .Select(m => new { m.ChatLastReadAtUtc })
             .FirstOrDefaultAsync(cancellationToken);
+        DateTimeOffset? lastRead = member?.ChatLastReadAtUtc;
         if (member is null)
         {
-            return GroupErrors.NotFound;
+            var ownsGroup = await context.Groups.AnyAsync(g => g.Id == request.GroupId
+                && context.Companies.Any(c => c.Id == g.CompanyId && c.OwnerUserId == userId), cancellationToken);
+            if (!ownsGroup) return GroupErrors.NotFound;
+            lastRead = DateTimeOffset.MaxValue;
         }
 
         var query = context.ChatMessages.AsNoTracking().Where(m => m.GroupId == request.GroupId);
@@ -53,6 +57,6 @@ public sealed class GetChatMessagesQueryHandler(
             .ToListAsync(cancellationToken);
 
         return Result.Success(await messages.ToDtosAsync(
-            context, userDirectory, userId, member.ChatLastReadAtUtc, cancellationToken));
+            context, userDirectory, userId, lastRead, cancellationToken));
     }
 }

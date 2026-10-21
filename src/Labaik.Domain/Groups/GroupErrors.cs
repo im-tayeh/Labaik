@@ -53,4 +53,15 @@ public static class GroupErrors
 
     public static Error AlreadyMember =>
         Error.Conflict("Group.AlreadyMember", "The user is already a member of this group.");
+
+    public static Error GroupNotesTooLong =>
+        Error.Validation("Group.GroupNotesTooLong", $"Group notes must be at most {Group.NotesMaxLength} characters.");
+    public static Error InvalidCapacity =>
+        Error.Validation("Group.InvalidCapacity", "Capacity must be at least 1.");
+    public static Error CapacityBelowMembers =>
+        Error.Conflict("Group.CapacityBelowMembers", "The group already has more pilgrims than this capacity.");
+    public static Error CapacityReached =>
+        Error.Conflict("Group.CapacityReached", "The group is full.");
+    public static Error HasMembers =>
+        Error.Conflict("Group.HasMembers", "Remove the group's pilgrims before deleting it.");
 }

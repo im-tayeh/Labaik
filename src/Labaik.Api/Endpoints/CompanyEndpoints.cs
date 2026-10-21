@@ -9,10 +9,13 @@ using Labaik.Application.Common.Provisioning;
 using Labaik.Application.Features.Companies.Commands.UpdateMyCompany;
 using Labaik.Application.Features.Companies.Queries.GetCompanyHome;
 using Labaik.Application.Features.Companies.Queries.GetCompanySupervisors;
+using Labaik.Application.Features.Companies.Queries.GetCompanyPilgrims;
 using Labaik.Application.Features.Companies.Queries.GetMyCompany;
 using Labaik.Application.Features.Groups.Commands.AddGroupMember;
 using Labaik.Application.Features.Groups.Commands.AssignGroupSupervisor;
 using Labaik.Application.Features.Groups.Commands.CreateTripGroup;
+using Labaik.Application.Features.Groups.Commands.UpdateCompanyGroup;
+using Labaik.Application.Features.Groups.Commands.DeleteCompanyGroup;
 using Labaik.Application.Features.Groups.Commands.RemoveGroupMember;
 using Labaik.Application.Features.Groups.Queries.GetGroupMember;
 using Labaik.Application.Features.Groups.Queries.GetGroupMembers;
@@ -69,14 +72,14 @@ public static class CompanyEndpoints
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         })
         .WithName("IssueSupervisorTemporaryPassword")
-        .WithSummary("Issue and email a new temporary password to a roster supervisor; returns the password once")
+        .WithSummary("Issue and email a temporary password; returns it only for accounts provisioned by this company")
         .Returns<TemporaryPasswordDto>().Fails(404);
 
         group.MapGet("/home", async (ISender sender, CancellationToken ct) =>
         {
             var result = await sender.Send(new GetCompanyHomeQuery(), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
-        })
+        }).RequireCompanyService(s => s.ReportsAndStats)
         .WithName("GetCompanyHome")
         .WithSummary("Company dashboard numbers: active trips, pilgrims, roster supervisors, groups")
         .WithResponseExample(StatusCodes.Status200OK, CompanyExamples.Home);
@@ -112,6 +115,33 @@ public static class CompanyEndpoints
         .WithName("GetCompanyGroups")
         .WithSummary("All my groups across trips, soonest trip first")
         .Returns<IReadOnlyList<CompanyGroupListItemDto>>().Fails(401);
+
+        group.MapPut("/groups/{groupId:guid}", async (Guid groupId, UpdateCompanyGroupRequest body, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new UpdateCompanyGroupCommand(groupId, body.Name, body.Notes, body.Capacity), ct);
+            return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
+        })
+        .WithName("UpdateCompanyGroup")
+        .WithSummary("Rename a group and set its notes and capacity")
+        .Returns<CompanyGroupDto>().Fails(400, 401, 403, 404, 409).Validates();
+
+        group.MapDelete("/groups/{groupId:guid}", async (Guid groupId, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new DeleteCompanyGroupCommand(groupId), ct);
+            return result.IsSuccess ? Results.NoContent() : result.Error!.ToProblem();
+        })
+        .WithName("DeleteCompanyGroup")
+        .WithSummary("Delete a group with no pilgrims")
+        .ReturnsNoContent().Fails(401, 403, 404, 409);
+
+        group.MapGet("/pilgrims", async (ISender sender, CancellationToken ct, string? search, int take = 100) =>
+        {
+            var result = await sender.Send(new GetCompanyPilgrimsQuery(search, take), ct);
+            return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
+        })
+        .WithName("GetCompanyPilgrims")
+        .WithSummary("Every pilgrim in my groups (distinct), with the groups they are in; search by name or email")
+        .Returns<IReadOnlyList<CompanyPilgrimDto>>().Fails(401, 403).Validates();
 
         group.MapPost("/announcements", async (PostCompanyAnnouncementCommand command, ISender sender, CancellationToken ct) =>
         {
@@ -172,7 +202,7 @@ public static class CompanyEndpoints
 
         group.MapPost("/trips/{tripId:guid}/groups", async (Guid tripId, CreateTripGroupRequest body, ISender sender, CancellationToken ct) =>
         {
-            var result = await sender.Send(new CreateTripGroupCommand(tripId, body.Name), ct);
+            var result = await sender.Send(new CreateTripGroupCommand(tripId, body.Name, body.Notes, body.Capacity), ct);
             return result.IsSuccess
                 ? Results.Created($"/api/v1/company/trips/{tripId}/groups", result.Value)
                 : result.Error!.ToProblem();

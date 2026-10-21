@@ -1,6 +1,7 @@
 using Labaik.Application.Features.Rituals.Dtos;
 using Labaik.Domain.Groups.Enums;
 using Labaik.Domain.Journeys.Enums;
+using Labaik.Application.Features.Companies.Dtos;
 
 namespace Labaik.Application.Features.Home.Dtos;
 
@@ -18,7 +19,10 @@ public sealed record HomeRitualDto(
 public sealed record HomeGroupDto(
     Guid Id, string Name, string? LeaderName, int MemberCount, GroupMemberRole MyRole, int UnreadAnnouncements,
     Guid? TripId, // null for standalone groups; use it for GET /trips/{tripId}/itinerary
-    int UnreadMessages); // group chat messages from others after my read marker
+    int UnreadMessages,
+    bool OnlySupervisorCanPost = false,
+    DateTimeOffset? MyMutedUntilUtc = null); // group chat settings
 
 // Every section is null when it does not apply (no journey yet, no published steps, not in a group).
-public sealed record HomeDto(HomeJourneyDto? Journey, HomeRitualDto? Ritual, HomeGroupDto? Group, int UnreadNotifications);
+public sealed record HomeDto(HomeJourneyDto? Journey, HomeRitualDto? Ritual, HomeGroupDto? Group,
+    int UnreadNotifications, CompanyServicesDto? EnabledServices = null);

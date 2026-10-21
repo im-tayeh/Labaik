@@ -28,6 +28,7 @@ public sealed class GetCompanyGroupsQueryHandler(
                           {
                               g.Id, g.Name, g.JoinCode, TripId = trip.Id, TripName = trip.Name,
                               TripDepartureDate = trip.DepartureDate, g.LeaderId,
+                              g.Notes, g.Capacity,
                               PilgrimCount = g.Members.Count(member => member.Role == GroupMemberRole.Member)
                           }).ToListAsync(cancellationToken);
 
@@ -35,6 +36,7 @@ public sealed class GetCompanyGroupsQueryHandler(
             rows.Where(row => row.LeaderId.HasValue).Select(row => row.LeaderId!.Value).Distinct().ToList(), cancellationToken);
         return rows.Select(row => new CompanyGroupListItemDto(
             row.Id, row.Name, row.JoinCode, row.TripId, row.TripName, row.TripDepartureDate, row.PilgrimCount,
-            row.LeaderId is { } supervisorId ? names.GetValueOrDefault(supervisorId) : null)).ToList();
+            row.LeaderId is { } supervisorId ? names.GetValueOrDefault(supervisorId) : null,
+            row.LeaderId, row.Notes, row.Capacity)).ToList();
     }
 }

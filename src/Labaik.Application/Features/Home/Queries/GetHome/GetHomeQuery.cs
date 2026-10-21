@@ -2,6 +2,7 @@ using Labaik.Application.Features.Chat.Dtos;
 using Labaik.Application.Common.Interfaces;
 using Labaik.Application.Features.Announcements.Dtos;
 using Labaik.Application.Features.Home.Dtos;
+using Labaik.Application.Features.Companies.Dtos;
 using Labaik.Application.Features.Rituals.Common;
 using Labaik.Application.Features.Rituals.Mappers;
 using Labaik.Domain.Common.Results;
@@ -20,7 +21,8 @@ public sealed record GetHomeQuery(Guid? GroupId = null) : IRequest<Result<HomeDt
 public sealed class GetHomeQueryHandler(
     IAppDbContext context,
     ICurrentUser currentUser,
-    IUserDirectory userDirectory) : IRequestHandler<GetHomeQuery, Result<HomeDto>>
+    IUserDirectory userDirectory,
+    ICompanyServiceGate serviceGate) : IRequestHandler<GetHomeQuery, Result<HomeDto>>
 {
     public async Task<Result<HomeDto>> Handle(GetHomeQuery request, CancellationToken cancellationToken)
     {
@@ -46,7 +48,13 @@ public sealed class GetHomeQueryHandler(
         var unreadNotifications = await context.Notifications
             .CountAsync(n => n.UserId == userId && n.ReadAtUtc == null, cancellationToken);
 
-        return new HomeDto(journey, ritual, group, unreadNotifications);
+        var enabled = new CompanyServicesDto(
+            await serviceGate.IsEnabledAsync(userId, s => s.GpsTracking, cancellationToken),
+            await serviceGate.IsEnabledAsync(userId, s => s.DuaAndRituals, cancellationToken),
+            await serviceGate.IsEnabledAsync(userId, s => s.InstantNotifications, cancellationToken),
+            await serviceGate.IsEnabledAsync(userId, s => s.ChatWithGuides, cancellationToken),
+            await serviceGate.IsEnabledAsync(userId, s => s.ReportsAndStats, cancellationToken));
+        return new HomeDto(journey, ritual, group, unreadNotifications, enabled);
     }
 
     private async Task<HomeRitualDto?> GetRitualAsync(Guid userId, PilgrimageType type, CancellationToken cancellationToken)
@@ -99,6 +107,7 @@ public sealed class GetHomeQueryHandler(
 
         var unreadMessages = await context.CountUnreadChatAsync(group.Id, userId, me.ChatLastReadAtUtc, cancellationToken);
 
-        return new HomeGroupDto(group.Id, group.Name, leaderName, group.MemberCount, myRole, unread, group.TripId, unreadMessages);
+        return new HomeGroupDto(group.Id, group.Name, leaderName, group.MemberCount, myRole, unread, group.TripId,
+            unreadMessages, group.OnlySupervisorCanPost, me.ChatMutedUntilUtc);
     }
 }

@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Asp.Versioning.Builder;
 using Labaik.Api.Extensions;
+using Labaik.Domain.Companies;
 using Labaik.Application.Features.Locations.Dtos;
 using Labaik.Api.OpenApi;
 using Labaik.Application.Features.Locations.Commands.SetLocationSharing;
@@ -20,7 +21,8 @@ public static class LocationEndpoints
             .MapGroup("/api/v{version:apiVersion}/location")
             .WithApiVersionSet(versionSet)
             .WithTags("Location")
-            .RequireAuthorization();
+            .RequireAuthorization()
+            .RequireCompanyService(s => s.GpsTracking);
 
         group.MapGet("/me", async (ISender sender, CancellationToken ct) =>
         {

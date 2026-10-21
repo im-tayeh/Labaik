@@ -7,12 +7,14 @@ public sealed class CompanySupervisor : Entity
 {
     public Guid UserId { get; private set; }
     public DateTimeOffset AddedAtUtc { get; private set; }
+    public Guid? ProvisionedByCompanyId { get; private set; }
 
     private CompanySupervisor() { } // EF
 
-    internal CompanySupervisor(Guid userId, DateTimeOffset addedAtUtc)
+    internal CompanySupervisor(Guid userId, DateTimeOffset addedAtUtc, Guid? provisionedByCompanyId)
     {
         UserId = userId;
         AddedAtUtc = addedAtUtc;
+        ProvisionedByCompanyId = provisionedByCompanyId;
     }
 }

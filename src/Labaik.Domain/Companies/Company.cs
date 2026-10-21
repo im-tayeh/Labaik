@@ -8,8 +8,7 @@ namespace Labaik.Domain.Companies;
 
 // An Umrah/Hajj operator. Created only by a platform admin; owned by one user account
 // (the account holding the Company role). Owns trips and the groups under them.
-// Contract, capacity and service fields are stored for the admin dashboard only: billing,
-// limits and feature flags are not enforced.
+// Contract, capacity and service fields are maintained by platform admins.
 public sealed class Company : AggregateRoot
 {
     public string Name { get; private set; } = string.Empty;
@@ -167,7 +166,7 @@ public sealed class Company : AggregateRoot
         ContactFullName = profile.ContactFullName
     });
 
-    public Result<CompanySupervisor> AddSupervisor(Guid userId, DateTimeOffset addedAtUtc)
+    public Result<CompanySupervisor> AddSupervisor(Guid userId, DateTimeOffset addedAtUtc, Guid? provisionedByCompanyId = null)
     {
         if (userId == Guid.Empty)
         {
@@ -184,12 +183,17 @@ public sealed class Company : AggregateRoot
             return CompanyErrors.SupervisorAlreadyAdded;
         }
 
-        var supervisor = new CompanySupervisor(userId, addedAtUtc);
+        if (MaxSupervisors is { } max && _supervisors.Count >= max) return CompanyErrors.LimitReached;
+
+        var supervisor = new CompanySupervisor(userId, addedAtUtc, provisionedByCompanyId);
         _supervisors.Add(supervisor);
         return supervisor;
     }
 
     public bool HasSupervisor(Guid userId) => _supervisors.Any(s => s.UserId == userId);
+
+    public Result EnsureCanAddSupervisor() => MaxSupervisors is { } max && _supervisors.Count >= max
+        ? Result.Failure(CompanyErrors.LimitReached) : Result.Success();
 
     public void Stop() => IsStopped = true;
 

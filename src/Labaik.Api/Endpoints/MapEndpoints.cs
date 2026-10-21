@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Asp.Versioning.Builder;
 using Labaik.Api.Extensions;
+using Labaik.Domain.Companies;
 using Labaik.Api.OpenApi;
 using Labaik.Application.Features.Locations.Commands.UpdateMyLocation;
 using Labaik.Application.Features.Map.Commands.ReportEmergency;
@@ -85,7 +86,7 @@ public static class MapEndpoints
         {
             var result = await sender.Send(command, ct);
             return result.IsSuccess ? Results.NoContent() : result.Error!.ToProblem();
-        })
+        }).RequireCompanyService(s => s.GpsTracking)
         .WithName("UpdateMyLocationAlias")
         .WithSummary("Alias of POST /location (send my current position; sharing must be on)")
         .Fails(400, 401, 409).Validates()

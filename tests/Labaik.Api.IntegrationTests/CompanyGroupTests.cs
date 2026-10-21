@@ -47,6 +47,51 @@ public class CompanyGroupTests(LabaikApiFactory factory)
         var row = Assert.Single(allGroups.EnumerateArray());
         Assert.Equal("December Umrah", row.GetProperty("tripName").GetString());
         Assert.Equal("2030-12-10", row.GetProperty("tripDepartureDate").GetString());
+        Assert.Equal(JsonValueKind.Null, row.GetProperty("supervisorUserId").ValueKind);
+    }
+
+    [Fact]
+    public async Task Company_can_edit_group_details_and_delete_empty_groups_only()
+    {
+        var (company, _) = await TestUsers.CreateCompanyAsync(factory);
+        var groupId = await CreateTripGroupAsync(company);
+        var pilgrim = await TestUsers.CreateAsync(factory);
+        Assert.Equal(HttpStatusCode.OK, (await company.Client.PostAsJsonAsync(
+            $"/api/v1/company/groups/{groupId}/members", new { email = pilgrim.Email })).StatusCode);
+
+        var update = await company.Client.PutAsJsonAsync($"/api/v1/company/groups/{groupId}",
+            new { name = "Updated", notes = "Meet by gate 4", capacity = 2 });
+        Assert.Equal(HttpStatusCode.OK, update.StatusCode);
+        var dto = await update.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Updated", dto.GetProperty("name").GetString());
+        Assert.Equal("Meet by gate 4", dto.GetProperty("notes").GetString());
+        Assert.Equal(2, dto.GetProperty("capacity").GetInt32());
+
+        Assert.Equal(HttpStatusCode.Conflict,
+            (await company.Client.DeleteAsync($"/api/v1/company/groups/{groupId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent,
+            (await company.Client.DeleteAsync($"/api/v1/company/groups/{groupId}/members/{pilgrim.Id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent,
+            (await company.Client.DeleteAsync($"/api/v1/company/groups/{groupId}")).StatusCode);
+        var list = await company.Client.GetFromJsonAsync<JsonElement>("/api/v1/company/groups");
+        Assert.DoesNotContain(list.EnumerateArray(), row => row.GetProperty("id").GetGuid() == groupId);
+    }
+
+    [Fact]
+    public async Task Company_pilgrim_list_is_distinct_and_returns_group_ids()
+    {
+        var (company, _) = await TestUsers.CreateCompanyAsync(factory);
+        var pilgrim = await TestUsers.CreateAsync(factory);
+        var groupA = await CreateTripGroupAsync(company, "Alpha");
+        var groupB = await CreateTripGroupAsync(company, "Beta");
+        foreach (var groupId in new[] { groupA, groupB })
+            Assert.Equal(HttpStatusCode.OK, (await company.Client.PostAsJsonAsync(
+                $"/api/v1/company/groups/{groupId}/members", new { email = pilgrim.Email })).StatusCode);
+
+        var rows = await company.Client.GetFromJsonAsync<JsonElement>("/api/v1/company/pilgrims?search=" + pilgrim.Email);
+        var row = Assert.Single(rows.EnumerateArray());
+        Assert.Equal(pilgrim.Id, row.GetProperty("userId").GetGuid());
+        Assert.Equal(2, row.GetProperty("groupIds").GetArrayLength());
     }
 
     [Fact]

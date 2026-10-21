@@ -8,6 +8,7 @@ using Labaik.Application.Features.Announcements.Dtos;
 using Labaik.Application.Features.Announcements.Queries.GetGroupAnnouncements;
 using Labaik.Application.Features.Chat.Commands.MarkChatRead;
 using Labaik.Application.Features.Chat.Commands.SendChatMessage;
+using Labaik.Application.Features.Chat.Commands;
 using Labaik.Application.Features.Chat.Dtos;
 using Labaik.Application.Features.Chat.Queries.GetChatMessages;
 using Labaik.Application.Features.Chat.Queries.GetChatUnreadCount;
@@ -30,6 +31,7 @@ using Labaik.Application.Features.Locations.Dtos;
 using Labaik.Application.Features.Locations.Queries.GetGroupMemberLocations;
 using Labaik.Application.Features.Notifications.Dtos;
 using Labaik.Domain.Chat;
+using Labaik.Domain.Companies;
 using MediatR;
 
 namespace Labaik.Api.Endpoints;
@@ -98,7 +100,7 @@ public static class GroupEndpoints
         {
             var result = await sender.Send(new GetGroupMemberLocationsQuery(groupId), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
-        })
+        }).RequireCompanyService(s => s.GpsTracking)
         .WithName("GetGroupMemberLocations")
         .WithSummary("Where are my group members: every member with their shared position (members only)")
         .Returns<IReadOnlyList<MemberLocationDto>>().Fails(401, 404);
@@ -214,7 +216,7 @@ public static class GroupEndpoints
             return result.IsSuccess
                 ? Results.Created($"/api/v1/groups/{groupId}/messages", result.Value)
                 : result.Error!.ToProblem();
-        })
+        }).RequireCompanyService(s => s.ChatWithGuides)
         .WithName("SendChatMessage")
         .WithSummary("Send a text (kind 1) or location (kind 2: latitude/longitude, body = caption) message to the group chat (members only)")
         .Returns<ChatMessageDto>(StatusCodes.Status201Created).Fails(400, 401, 404).Validates();
@@ -223,16 +225,16 @@ public static class GroupEndpoints
         {
             var result = await sender.Send(new GetChatMessagesQuery(groupId, before, take), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
-        })
+        }).RequireCompanyService(s => s.ChatWithGuides)
         .WithName("GetChatMessages")
-        .WithSummary("Group chat history, newest first, with isRead for me (cursor: before = oldest sentAtUtc; take 1-100, default 50; members only)")
+        .WithSummary("Group chat history for members or the owning company (read only), newest first")
         .Returns<IReadOnlyList<ChatMessageDto>>().Fails(401, 404).Validates();
 
         group.MapPost("/{groupId:guid}/messages/read", async (Guid groupId, ISender sender, CancellationToken ct) =>
         {
             var result = await sender.Send(new MarkChatReadCommand(groupId), ct);
             return result.IsSuccess ? Results.NoContent() : result.Error!.ToProblem();
-        })
+        }).RequireCompanyService(s => s.ChatWithGuides)
         .WithName("MarkChatRead")
         .WithSummary("Mark the group chat read up to now (idempotent; members only)")
         .ReturnsNoContent().Fails(401, 404);
@@ -241,10 +243,34 @@ public static class GroupEndpoints
         {
             var result = await sender.Send(new GetChatUnreadCountQuery(groupId), ct);
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
-        })
+        }).RequireCompanyService(s => s.ChatWithGuides)
         .WithName("GetChatUnreadCount")
         .WithSummary("Unread group chat messages from others (members only)")
         .Returns<UnreadCountDto>().Fails(401, 404);
+
+        group.MapDelete("/{groupId:guid}/messages/{messageId:guid}", async (Guid groupId, Guid messageId, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new DeleteChatMessageCommand(groupId, messageId), ct);
+            return result.IsSuccess ? Results.NoContent() : result.Error!.ToProblem();
+        }).RequireCompanyService(s => s.ChatWithGuides)
+        .WithName("DeleteChatMessage").WithSummary("Delete a chat message (author or supervisor)")
+        .ReturnsNoContent().Fails(401, 403, 404);
+
+        group.MapPost("/{groupId:guid}/chat/mute", async (Guid groupId, MuteChatMemberRequest body, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new MuteChatMemberCommand(groupId, body.UserId, body.Minutes), ct);
+            return result.IsSuccess ? Results.NoContent() : result.Error!.ToProblem();
+        }).RequireCompanyService(s => s.ChatWithGuides)
+        .WithName("MuteChatMember").WithSummary("Mute a group pilgrim for up to seven days (0 unmutes)")
+        .ReturnsNoContent().Fails(401, 403, 404).Validates();
+
+        group.MapPut("/{groupId:guid}/chat/settings", async (Guid groupId, SetChatSettingsRequest body, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new SetChatSettingsCommand(groupId, body.OnlySupervisorCanPost), ct);
+            return result.IsSuccess ? Results.Ok(new { body.OnlySupervisorCanPost }) : result.Error!.ToProblem();
+        }).RequireCompanyService(s => s.ChatWithGuides)
+        .WithName("SetChatSettings").WithSummary("Set whether only the supervisor can post to the group chat")
+        .Returns<object>().Fails(401, 403, 404);
 
         return app;
     }

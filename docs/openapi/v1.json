@@ -2439,7 +2439,7 @@
         "tags": [
           "Groups"
         ],
-        "summary": "Group chat history, newest first, with isRead for me (cursor: before = oldest sentAtUtc; take 1-100, default 50; members only)",
+        "summary": "Group chat history for members or the owning company (read only), newest first",
         "operationId": "GetChatMessages",
         "parameters": [
           {
@@ -2612,6 +2612,245 @@
           },
           "401": {
             "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error: RFC 9457 ProblemDetails with \u0022code\u0022 (see components.schemas.ProblemDetails).",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/groups/{groupId}/messages/{messageId}": {
+      "delete": {
+        "tags": [
+          "Groups"
+        ],
+        "summary": "Delete a chat message (author or supervisor)",
+        "operationId": "DeleteChatMessage",
+        "parameters": [
+          {
+            "name": "groupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "messageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error: RFC 9457 ProblemDetails with \u0022code\u0022 (see components.schemas.ProblemDetails).",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/groups/{groupId}/chat/mute": {
+      "post": {
+        "tags": [
+          "Groups"
+        ],
+        "summary": "Mute a group pilgrim for up to seven days (0 unmutes)",
+        "operationId": "MuteChatMember",
+        "parameters": [
+          {
+            "name": "groupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MuteChatMemberRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error: RFC 9457 ProblemDetails with \u0022code\u0022 (see components.schemas.ProblemDetails).",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/groups/{groupId}/chat/settings": {
+      "put": {
+        "tags": [
+          "Groups"
+        ],
+        "summary": "Set whether only the supervisor can post to the group chat",
+        "operationId": "SetChatSettings",
+        "parameters": [
+          {
+            "name": "groupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetChatSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -3632,7 +3871,7 @@
         "tags": [
           "Admin"
         ],
-        "summary": "Dashboard home numbers: subscriptions, expiring soon, active pilgrims, companies",
+        "summary": "Dashboard home numbers; pendingRequests is deprecated and always 0",
         "operationId": "GetAdminOverview",
         "responses": {
           "401": {
@@ -5134,7 +5373,7 @@
         "tags": [
           "Company"
         ],
-        "summary": "Issue and email a new temporary password to a roster supervisor; returns the password once",
+        "summary": "Issue and email a temporary password; returns it only for accounts provisioned by this company",
         "operationId": "IssueSupervisorTemporaryPassword",
         "parameters": [
           {
@@ -5459,6 +5698,273 @@
                   "items": {
                     "$ref": "#/components/schemas/CompanyGroupListItemDto"
                   }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error: RFC 9457 ProblemDetails with \u0022code\u0022 (see components.schemas.ProblemDetails).",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/company/groups/{groupId}": {
+      "put": {
+        "tags": [
+          "Company"
+        ],
+        "summary": "Rename a group and set its notes and capacity",
+        "operationId": "UpdateCompanyGroup",
+        "parameters": [
+          {
+            "name": "groupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCompanyGroupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompanyGroupDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error: RFC 9457 ProblemDetails with \u0022code\u0022 (see components.schemas.ProblemDetails).",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Company"
+        ],
+        "summary": "Delete a group with no pilgrims",
+        "operationId": "DeleteCompanyGroup",
+        "parameters": [
+          {
+            "name": "groupId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error: RFC 9457 ProblemDetails with \u0022code\u0022 (see components.schemas.ProblemDetails).",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/company/pilgrims": {
+      "get": {
+        "tags": [
+          "Company"
+        ],
+        "summary": "Every pilgrim in my groups (distinct), with the groups they are in; search by name or email",
+        "operationId": "GetCompanyPilgrims",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "take",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 100
+            }
+          }
+        ],
+        "responses": {
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CompanyPilgrimDto"
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
                 }
               }
             }
@@ -5966,7 +6472,9 @@
                 "$ref": "#/components/schemas/CreateTripGroupRequest"
               },
               "example": {
-                "name": "Group A"
+                "name": "Group A",
+                "notes": null,
+                "capacity": null
               }
             }
           },
@@ -6007,7 +6515,9 @@
                   "joinCode": "K7P2QX",
                   "supervisorId": null,
                   "supervisorName": null,
-                  "pilgrimCount": 0
+                  "pilgrimCount": 0,
+                  "notes": null,
+                  "capacity": null
                 }
               }
             }
@@ -6100,7 +6610,9 @@
                     "joinCode": "K7P2QX",
                     "supervisorId": "2a3b4c5d-6e7f-4809-9a1b-2c3d4e5f6a7b",
                     "supervisorName": "Omar Haddad",
-                    "pilgrimCount": 38
+                    "pilgrimCount": 38,
+                    "notes": null,
+                    "capacity": null
                   }
                 ]
               }
@@ -6197,7 +6709,9 @@
                   "joinCode": "K7P2QX",
                   "supervisorId": "2a3b4c5d-6e7f-4809-9a1b-2c3d4e5f6a7b",
                   "supervisorName": "Omar Haddad",
-                  "pilgrimCount": 38
+                  "pilgrimCount": 38,
+                  "notes": null,
+                  "capacity": null
                 }
               }
             }
@@ -6587,7 +7101,9 @@
                   "joinCode": "K7P2QX",
                   "supervisorId": "2a3b4c5d-6e7f-4809-9a1b-2c3d4e5f6a7b",
                   "supervisorName": "Omar Haddad",
-                  "pilgrimCount": 38
+                  "pilgrimCount": 38,
+                  "notes": null,
+                  "capacity": null
                 }
               }
             }
@@ -9057,6 +9573,10 @@
           },
           "isRead": {
             "type": "boolean"
+          },
+          "isDeleted": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -9195,6 +9715,15 @@
           "pilgrimCount": {
             "type": "integer",
             "format": "int32"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "capacity": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
           }
         }
       },
@@ -9239,6 +9768,20 @@
           "supervisorName": {
             "type": "string",
             "nullable": true
+          },
+          "supervisorUserId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "capacity": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
           }
         }
       },
@@ -9266,6 +9809,39 @@
           "groupsCount": {
             "type": "integer",
             "format": "int32"
+          }
+        }
+      },
+      "CompanyPilgrimDto": {
+        "required": [
+          "userId",
+          "fullName",
+          "email",
+          "phoneNumber",
+          "groupIds"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "phoneNumber": {
+            "type": "string",
+            "nullable": true
+          },
+          "groupIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         }
       },
@@ -9653,6 +10229,15 @@
         "properties": {
           "name": {
             "type": "string"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "capacity": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
           }
         }
       },
@@ -10426,6 +11011,14 @@
           "unreadNotifications": {
             "type": "integer",
             "format": "int32"
+          },
+          "enabledServices": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CompanyServicesDto"
+              }
+            ],
+            "nullable": true
           }
         }
       },
@@ -10472,6 +11065,15 @@
           "unreadMessages": {
             "type": "integer",
             "format": "int32"
+          },
+          "onlySupervisorCanPost": {
+            "type": "boolean",
+            "default": false
+          },
+          "myMutedUntilUtc": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
           }
         }
       },
@@ -11047,6 +11649,23 @@
         "properties": {
           "message": {
             "type": "string"
+          }
+        }
+      },
+      "MuteChatMemberRequest": {
+        "required": [
+          "userId",
+          "minutes"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "minutes": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
@@ -11750,6 +12369,17 @@
           }
         }
       },
+      "SetChatSettingsRequest": {
+        "required": [
+          "onlySupervisorCanPost"
+        ],
+        "type": "object",
+        "properties": {
+          "onlySupervisorCanPost": {
+            "type": "boolean"
+          }
+        }
+      },
       "SetFamilyLocationSharingRequest": {
         "required": [
           "isSharing"
@@ -11949,7 +12579,8 @@
         "type": "object",
         "properties": {
           "temporaryPassword": {
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "emailSent": {
             "type": "boolean"
@@ -12145,6 +12776,26 @@
           "count": {
             "type": "integer",
             "format": "int32"
+          }
+        }
+      },
+      "UpdateCompanyGroupRequest": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "capacity": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
           }
         }
       },

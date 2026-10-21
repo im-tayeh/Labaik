@@ -1,5 +1,6 @@
 using Labaik.Application.Features.FamilyCircles.Queries.GetFamilyCircles;
 using Labaik.Application.Features.Locations.Commands.UpdateMyLocation;
+using Labaik.Application.Common.Interfaces;
 using MediatR;
 using Microsoft.AspNetCore.SignalR;
 
@@ -9,7 +10,7 @@ namespace Labaik.Api.Realtime;
 // Client -> server: UpdateLocation(latitude, longitude, accuracyMeters?)
 // Server -> client: "LocationUpdated" (LiveLocationDto), "StoppedSharing" ({ userId })
 // Subscriptions (groups and circles) are taken at connect time: reconnect after joining one.
-public sealed class LocationHub(ISender sender) : GroupSubscribedHub(sender)
+public sealed class LocationHub(ISender sender, ICompanyServiceGate serviceGate) : GroupSubscribedHub(sender)
 {
     public const string Path = "/hubs/location";
 
@@ -33,6 +34,9 @@ public sealed class LocationHub(ISender sender) : GroupSubscribedHub(sender)
     {
         try
         {
+            if (!Guid.TryParse(Context.UserIdentifier, out var userId)
+                || !await serviceGate.IsEnabledAsync(userId, s => s.GpsTracking, Context.ConnectionAborted))
+                throw new HubException("Company.ServiceDisabled");
             var result = await Sender.Send(new UpdateMyLocationCommand(latitude, longitude, accuracyMeters), Context.ConnectionAborted);
             if (result.IsFailure)
             {

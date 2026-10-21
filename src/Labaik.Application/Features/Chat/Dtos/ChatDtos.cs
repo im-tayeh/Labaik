@@ -18,7 +18,8 @@ public sealed record ChatMessageDto(
     double? Latitude,
     double? Longitude,
     string? SenderPhotoUrl,
-    bool IsRead);
+    bool IsRead,
+    bool IsDeleted = false);
 
 internal static class ChatMessageMapper
 {
@@ -38,9 +39,11 @@ internal static class ChatMessageMapper
 
         return messages
             .Select(m => new ChatMessageDto(
-                m.Id, m.GroupId, m.SenderId, names.GetValueOrDefault(m.SenderId), m.Body, m.SentAtUtc,
-                m.Kind, m.Latitude, m.Longitude, photos.GetValueOrDefault(m.SenderId),
-                IsRead: m.SenderId == viewerId || (viewerLastReadUtc is { } read && m.SentAtUtc <= read)))
+                m.Id, m.GroupId, m.SenderId, names.GetValueOrDefault(m.SenderId), m.DeletedAtUtc is null ? m.Body : string.Empty, m.SentAtUtc,
+                m.Kind, m.DeletedAtUtc is null ? m.Latitude : null, m.DeletedAtUtc is null ? m.Longitude : null,
+                photos.GetValueOrDefault(m.SenderId),
+                IsRead: m.SenderId == viewerId || (viewerLastReadUtc is { } read && m.SentAtUtc <= read),
+                IsDeleted: m.DeletedAtUtc is not null))
             .ToList();
     }
 
@@ -48,6 +51,6 @@ internal static class ChatMessageMapper
     public static Task<int> CountUnreadChatAsync(
         this IAppDbContext context, Guid groupId, Guid userId, DateTimeOffset? lastReadUtc, CancellationToken cancellationToken)
         => context.ChatMessages.CountAsync(
-            m => m.GroupId == groupId && m.SenderId != userId && (lastReadUtc == null || m.SentAtUtc > lastReadUtc),
+            m => m.GroupId == groupId && m.DeletedAtUtc == null && m.SenderId != userId && (lastReadUtc == null || m.SentAtUtc > lastReadUtc),
             cancellationToken);
 }

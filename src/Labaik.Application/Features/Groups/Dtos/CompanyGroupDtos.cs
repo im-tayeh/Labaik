@@ -11,7 +11,9 @@ public sealed record CompanyGroupDto(
     string JoinCode,
     Guid? SupervisorId,
     string? SupervisorName,
-    int PilgrimCount);
+    int PilgrimCount,
+    string? Notes = null,
+    int? Capacity = null);
 
 public static class CompanyGroupMapper
 {
@@ -19,6 +21,6 @@ public static class CompanyGroupMapper
         this Group g, IUserDirectory userDirectory, CancellationToken cancellationToken)
     {
         var supervisorName = g.LeaderId is { } id ? await userDirectory.GetFullNameAsync(id, cancellationToken) : null;
-        return new CompanyGroupDto(g.Id, g.TripId!.Value, g.Name, g.JoinCode, g.LeaderId, supervisorName, g.PilgrimCount);
+        return new CompanyGroupDto(g.Id, g.TripId!.Value, g.Name, g.JoinCode, g.LeaderId, supervisorName, g.PilgrimCount, g.Notes, g.Capacity);
     }
 }

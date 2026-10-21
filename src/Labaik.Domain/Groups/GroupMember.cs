@@ -36,8 +36,10 @@ public sealed class GroupMember : Entity
 
     // Group chat messages sent after this are unread for this member (null = nothing read yet).
     public DateTimeOffset? ChatLastReadAtUtc { get; private set; }
+    public DateTimeOffset? ChatMutedUntilUtc { get; private set; }
 
     internal void SetNotes(string? notes) => Notes = notes;
+    internal void MuteChat(DateTimeOffset? untilUtc) => ChatMutedUntilUtc = untilUtc;
 
     internal void MarkChatRead(DateTimeOffset readUpToUtc)
     {

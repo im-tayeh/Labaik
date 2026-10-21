@@ -59,6 +59,9 @@ public sealed class AddCompanySupervisorCommandHandler(
             if (company.HasSupervisor(existing.Value.Id)) return CompanyErrors.SupervisorAlreadyAdded;
         }
 
+        var canAdd = company.EnsureCanAddSupervisor();
+        if (canAdd.IsFailure) return canAdd.Error!;
+
         var account = await identityService.ProvisionAccountAsync(
             request.FullName, email, request.PhoneNumber, Roles.Supervisor, cancellationToken: cancellationToken);
         if (account.IsFailure)
@@ -66,7 +69,7 @@ public sealed class AddCompanySupervisorCommandHandler(
             return account.Error!;
         }
 
-        var add = company.AddSupervisor(account.Value.Id, timeProvider.GetUtcNow());
+        var add = company.AddSupervisor(account.Value.Id, timeProvider.GetUtcNow(), account.Value.IsNew ? company.Id : null);
         if (add.IsFailure)
         {
             return add.Error!;

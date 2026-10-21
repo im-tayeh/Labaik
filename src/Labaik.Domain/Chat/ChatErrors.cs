@@ -20,4 +20,8 @@ public static class ChatErrors
 
     public static Error NotMember =>
         Error.Forbidden("Chat.NotMember", "Only group members can send messages.");
+    public static Error Muted => Error.Forbidden("Chat.Muted", "You are muted in this group chat.");
+    public static Error SupervisorOnly => Error.Forbidden("Chat.SupervisorOnly", "Only the supervisor can post in this group chat.");
+    public static Error MessageNotFound => Error.NotFound("Chat.MessageNotFound", "The message was not found.");
+    public static Error InvalidMuteDuration => Error.Validation("Chat.InvalidMuteDuration", "Mute minutes must be between 0 and 10080.");
 }

@@ -40,7 +40,7 @@ public static class AdminEndpoints
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         })
         .WithName("GetAdminOverview")
-        .WithSummary("Dashboard home numbers: subscriptions, expiring soon, active pilgrims, companies")
+        .WithSummary("Dashboard home numbers; pendingRequests is deprecated and always 0")
         .WithResponseExample(StatusCodes.Status200OK, AdminExamples.Overview);
 
         group.MapGet("/users", async (string email, ISender sender, CancellationToken ct) =>

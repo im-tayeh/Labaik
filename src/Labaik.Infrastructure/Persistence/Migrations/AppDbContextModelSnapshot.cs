@@ -88,6 +88,12 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
 
+                    b.Property<DateTimeOffset?>("DeletedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("GroupId")
                         .HasColumnType("uuid");
 
@@ -260,6 +266,9 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int?>("Capacity")
+                        .HasColumnType("integer");
+
                     b.Property<Guid?>("CompanyId")
                         .HasColumnType("uuid");
 
@@ -278,6 +287,13 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<bool>("OnlySupervisorCanPost")
+                        .HasColumnType("boolean");
 
                     b.Property<Guid?>("TripId")
                         .HasColumnType("uuid");
@@ -1111,6 +1127,9 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                             b1.Property<Guid>("CompanyId")
                                 .HasColumnType("uuid");
 
+                            b1.Property<Guid?>("ProvisionedByCompanyId")
+                                .HasColumnType("uuid");
+
                             b1.Property<Guid>("UserId")
                                 .HasColumnType("uuid");
 
@@ -1195,6 +1214,9 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                                 .HasColumnType("integer");
 
                             b1.Property<DateTimeOffset?>("ChatLastReadAtUtc")
+                                .HasColumnType("timestamp with time zone");
+
+                            b1.Property<DateTimeOffset?>("ChatMutedUntilUtc")
                                 .HasColumnType("timestamp with time zone");
 
                             b1.Property<Guid>("GroupId")

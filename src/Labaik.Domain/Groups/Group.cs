@@ -29,9 +29,27 @@ public sealed class Group : AggregateRoot
     // Highest pilgrim number handed out so far (numbers are never reused after a removal).
     public int LastMemberNumber { get; private set; }
 
+    public const int NotesMaxLength = 1000;
+    public string? Notes { get; private set; }
+    public int? Capacity { get; private set; }
+
+    public Result UpdateDetails(string name, string? notes, int? capacity)
+    {
+        var valid = Validate(name, JoinCode);
+        if (valid.IsFailure) return valid;
+        if (notes?.Trim().Length > NotesMaxLength) return Result.Failure(GroupErrors.GroupNotesTooLong);
+        if (capacity is < 1) return Result.Failure(GroupErrors.InvalidCapacity);
+        if (capacity is { } max && PilgrimCount > max) return Result.Failure(GroupErrors.CapacityBelowMembers);
+        Name = name.Trim();
+        Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
+        Capacity = capacity;
+        return Result.Success();
+    }
+
     public int MemberCount => _members.Count;
     public int PilgrimCount => _members.Count(m => m.Role == GroupMemberRole.Member);
     public bool HasSupervisor => LeaderId is not null;
+    public bool OnlySupervisorCanPost { get; private set; }
 
     private Group() { } // EF
 
@@ -295,12 +313,40 @@ public sealed class Group : AggregateRoot
     // Any member may chat in the group. The new ChatMessage is its own aggregate; this group is not modified.
     public Result<ChatMessage> PostMessage(Guid senderId, ChatMessageContent content, DateTimeOffset sentAtUtc)
     {
-        if (!IsMember(senderId))
+        var member = _members.FirstOrDefault(m => m.UserId == senderId);
+        if (member is null)
         {
             return ChatErrors.NotMember;
         }
+        if (OnlySupervisorCanPost && LeaderId != senderId) return ChatErrors.SupervisorOnly;
+        if (member.ChatMutedUntilUtc is { } mutedUntil && mutedUntil > sentAtUtc) return ChatErrors.Muted;
 
         return ChatMessage.Create(Id, senderId, content, sentAtUtc);
+    }
+
+    public Result SetChatSettings(Guid byUserId, bool onlySupervisorCanPost)
+    {
+        if (LeaderId != byUserId) return Result.Failure(GroupErrors.NotLeader);
+        OnlySupervisorCanPost = onlySupervisorCanPost;
+        return Result.Success();
+    }
+
+    public Result MuteChatMember(Guid byUserId, Guid memberId, int minutes, DateTimeOffset nowUtc)
+    {
+        if (LeaderId != byUserId) return Result.Failure(GroupErrors.NotLeader);
+        if (minutes is < 0 or > 10080) return Result.Failure(ChatErrors.InvalidMuteDuration);
+        var member = _members.FirstOrDefault(m => m.UserId == memberId && m.Role == GroupMemberRole.Member);
+        if (member is null) return Result.Failure(GroupErrors.MemberNotFound);
+        member.MuteChat(minutes == 0 ? null : nowUtc.AddMinutes(minutes));
+        return Result.Success();
+    }
+
+    public Result DeleteMessage(Guid byUserId, ChatMessage message, DateTimeOffset nowUtc)
+    {
+        if (message.GroupId != Id) return Result.Failure(ChatErrors.MessageNotFound);
+        if (LeaderId != byUserId && message.SenderId != byUserId) return Result.Failure(GroupErrors.NotLeader);
+        message.Delete(byUserId, nowUtc);
+        return Result.Success();
     }
 
     public Result<ChatMessage> PostMessage(Guid senderId, string body, DateTimeOffset sentAtUtc)
@@ -324,6 +370,11 @@ public sealed class Group : AggregateRoot
         if (_members.Any(m => m.UserId == userId))
         {
             return Result.Failure(GroupErrors.AlreadyMember);
+        }
+
+        if (Capacity is { } max && PilgrimCount >= max)
+        {
+            return Result.Failure(GroupErrors.CapacityReached);
         }
 
         LastMemberNumber++;

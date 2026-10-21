@@ -94,6 +94,25 @@ public class GroupTests
         Assert.Equal(Now, group.Members.Single(m => m.UserId == LeaderId).ChatLastReadAtUtc);
         Assert.Equal("Chat.NotMember", group.MarkChatRead(Guid.NewGuid(), Now).Error!.Code);
     }
+
+    [Fact]
+    public void Supervisor_controls_group_chat_and_can_delete_messages()
+    {
+        var group = NewGroup();
+        var memberId = Guid.NewGuid();
+        group.Join(memberId, Now);
+        var message = group.PostMessage(memberId, "hello", Now).Value;
+
+        Assert.True(group.SetChatSettings(LeaderId, true).IsSuccess);
+        Assert.Equal("Chat.SupervisorOnly", group.PostMessage(memberId, "blocked", Now).Error!.Code);
+        Assert.True(group.SetChatSettings(LeaderId, false).IsSuccess);
+        Assert.True(group.MuteChatMember(LeaderId, memberId, 30, Now).IsSuccess);
+        Assert.Equal("Chat.Muted", group.PostMessage(memberId, "muted", Now.AddMinutes(1)).Error!.Code);
+        Assert.Equal("Chat.InvalidMuteDuration", group.MuteChatMember(LeaderId, memberId, 10081, Now).Error!.Code);
+        Assert.Equal("Group.NotLeader", group.DeleteMessage(Guid.NewGuid(), message, Now).Error!.Code);
+        Assert.True(group.DeleteMessage(LeaderId, message, Now).IsSuccess);
+        Assert.NotNull(message.DeletedAtUtc);
+    }
 }
 
 public class CompanyGroupDomainTests
@@ -102,6 +121,18 @@ public class CompanyGroupDomainTests
 
     private static Group NewTripGroup() =>
         Group.CreateForTrip("Group A", "CODE01", Guid.NewGuid(), Guid.NewGuid(), Now).Value;
+
+    [Fact]
+    public void Capacity_limits_pilgrims_and_cannot_be_lowered_below_existing_count()
+    {
+        var group = NewTripGroup();
+        Assert.True(group.UpdateDetails("Group A", null, 1).IsSuccess);
+        Assert.True(group.AddMember(Guid.NewGuid(), Now).IsSuccess);
+        Assert.Equal("Group.CapacityReached", group.AddMember(Guid.NewGuid(), Now).Error!.Code);
+        Assert.True(group.UpdateDetails("Group A", null, 2).IsSuccess);
+        Assert.True(group.AddMember(Guid.NewGuid(), Now).IsSuccess);
+        Assert.Equal("Group.CapacityBelowMembers", group.UpdateDetails("Group A", null, 1).Error!.Code);
+    }
 
     [Fact]
     public void CreateForTrip_starts_without_supervisor_or_members()

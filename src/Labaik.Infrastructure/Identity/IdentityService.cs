@@ -2,8 +2,11 @@
 using Labaik.Application.Common.Models;
 using Labaik.Domain.Common.Results;
 using Labaik.Domain.Identity;
+using Labaik.Domain.Companies;
+using Labaik.Domain.Companies.Enums;
 using Labaik.Application.Common.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Security.Cryptography;
@@ -15,7 +18,9 @@ internal sealed class IdentityService(
     IVerificationCodeService verificationCodeService,
     IRefreshTokenService refreshTokenService,
     IOptions<AdminSettings> adminOptions,
-    ILogger<IdentityService> logger) : IIdentityService
+    ILogger<IdentityService> logger,
+    IAppDbContext context,
+    TimeProvider timeProvider) : IIdentityService
 {
     public async Task<Result<Guid>> CreateUserAsync(string fullName, string email, string password, CancellationToken cancellationToken = default)
     {
@@ -159,7 +164,38 @@ internal sealed class IdentityService(
         }
         await EnsureBootstrapAdminAsync(user);
         var roles = await userManager.GetRolesAsync(user);
+        if (!roles.Contains(Roles.Admin))
+        {
+            var block = await GetCompanyBlockAsync(user.Id, roles);
+            if (block is not null) return block;
+        }
         return new AuthUser(user.Id, user.Email!, user.FullName, roles.ToList(), user.MustChangePassword);
+    }
+
+    private async Task<Error?> GetCompanyBlockAsync(Guid userId, IList<string> roles)
+    {
+        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+        if (roles.Contains(Roles.Company))
+        {
+            var owned = await context.Companies.AsNoTracking().Where(c => c.OwnerUserId == userId)
+                .Select(c => new { c.IsStopped, c.ContractEndDate }).FirstOrDefaultAsync();
+            if (owned is not null)
+            {
+                var status = Company.StatusOf(owned.IsStopped, owned.ContractEndDate, today);
+                if (status == CompanyStatus.Stopped) return CompanyErrors.Stopped;
+                if (status == CompanyStatus.Expired) return CompanyErrors.Expired;
+            }
+        }
+        if (roles.Contains(Roles.Supervisor))
+        {
+            var rosters = await context.Companies.AsNoTracking()
+                .Where(c => c.Supervisors.Any(s => s.UserId == userId))
+                .Select(c => new { c.IsStopped, c.ContractEndDate }).ToListAsync();
+            var statuses = rosters.Select(c => Company.StatusOf(c.IsStopped, c.ContractEndDate, today)).ToList();
+            if (statuses.Count > 0 && statuses.All(s => s != CompanyStatus.Active))
+                return statuses.All(s => s == CompanyStatus.Expired) ? CompanyErrors.Expired : CompanyErrors.Stopped;
+        }
+        return null;
     }
 
     private async Task EnsureBootstrapAdminAsync(ApplicationUser user)
@@ -193,6 +229,14 @@ internal sealed class IdentityService(
         var user = await userManager.FindByEmailAsync(email);
         return user is null
             ? Error.NotFound("User.NotFound", "No account found for this email.")
+            : await ToAccountDtoAsync(user);
+    }
+
+    public async Task<Result<UserAccountDto>> FindAccountByIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var user = await userManager.FindByIdAsync(userId.ToString());
+        return user is null
+            ? Error.NotFound("User.NotFound", "No account found for this id.")
             : await ToAccountDtoAsync(user);
     }
 

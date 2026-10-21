@@ -51,6 +51,7 @@ internal sealed class CompanyConfiguration : IEntityTypeConfiguration<Company>
             s.WithOwner().HasForeignKey("CompanyId");
             s.HasKey(x => x.Id);
             s.Property(x => x.Id).ValueGeneratedNever(); // new rows on a saved company must INSERT, not UPDATE
+            s.Property(x => x.ProvisionedByCompanyId);
             s.HasIndex(nameof(CompanySupervisor.UserId), "CompanyId").IsUnique();
         });
         builder.Navigation(c => c.Supervisors).UsePropertyAccessMode(PropertyAccessMode.Field);

@@ -3,6 +3,7 @@ using Labaik.Application.Common.Models;
 using Labaik.Application.Common.Provisioning;
 using Labaik.Application.Features.Companies.Common;
 using Labaik.Domain.Common.Results;
+using Labaik.Domain.Companies;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -25,14 +26,26 @@ public sealed class IssueSupervisorTempPasswordCommandHandler(
         var company = await context.Companies.FirstAsync(c => c.Id == companyId.Value, cancellationToken);
         if (!company.HasSupervisor(request.UserId)) return Error.NotFound("Company.SupervisorNotFound", "No supervisor found on this company's roster.");
 
-        var user = await identityService.GetAuthUserByIdAsync(request.UserId, cancellationToken);
-        if (user.IsFailure) return user.Error!;
+        var sharedElsewhere = await context.Companies.IgnoreQueryFilters().AnyAsync(c =>
+            c.OwnerUserId == request.UserId ||
+            (c.Id != company.Id && c.Supervisors.Any(s => s.UserId == request.UserId)), cancellationToken);
+        if (sharedElsewhere) return CompanyErrors.SupervisorNotOwnedByCompany;
+
+        var accountDetails = await identityService.FindAccountByIdAsync(request.UserId, cancellationToken);
+        if (accountDetails.IsFailure) return accountDetails.Error!;
+        if (accountDetails.Value.Roles.Contains(Labaik.Application.Common.Authorization.Roles.Admin))
+            return CompanyErrors.SupervisorNotOwnedByCompany;
+
         var password = await identityService.IssueTemporaryPasswordAsync(request.UserId, cancellationToken);
         if (password.IsFailure) return password.Error!;
 
-        var account = new ProvisionedAccount(user.Value.Id, user.Value.Email, user.Value.FullName, password.Value);
+        var account = new ProvisionedAccount(accountDetails.Value.Id, accountDetails.Value.Email, accountDetails.Value.FullName, password.Value);
         var sent = await emailSender.TrySendAsync(account.Email,
             AccountEmails.For(account, "supervisor", company.Name, appLinks.Value.DownloadUrl), logger, cancellationToken);
-        return new TemporaryPasswordDto(password.Value, sent);
+        var provisionedHere = await context.Companies
+            .Where(c => c.Id == company.Id)
+            .SelectMany(c => c.Supervisors)
+            .AnyAsync(s => s.UserId == request.UserId && s.ProvisionedByCompanyId == company.Id, cancellationToken);
+        return new TemporaryPasswordDto(provisionedHere ? password.Value : null, sent);
     }
 }
