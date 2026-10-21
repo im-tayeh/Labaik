@@ -1,5 +1,6 @@
 using Labaik.Application.Features.Chat.Dtos;
 using Labaik.Application.Features.Notifications.Dtos;
+using Labaik.Application.Features.DirectChat;
 
 namespace Labaik.Application.Common.Interfaces;
 
@@ -9,6 +10,7 @@ public interface IRealtimeNotifier
 {
     Task ChatMessageSentAsync(Guid groupId, ChatMessageDto message, CancellationToken cancellationToken = default);
     Task ChatMessageDeletedAsync(Guid groupId, Guid messageId, CancellationToken cancellationToken = default);
+    Task DirectMessageReceivedAsync(Guid recipientId, DirectMessageDto message, CancellationToken cancellationToken = default);
 
     Task NotificationCreatedAsync(Guid userId, NotificationDto notification, CancellationToken cancellationToken = default);
 }

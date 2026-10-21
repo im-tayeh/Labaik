@@ -172,6 +172,7 @@ try
     app.MapAuthEndpoints();
     app.MapJourneyEndpoints();
     app.MapGroupEndpoints();
+    app.MapChatEndpoints();
     app.MapRitualEndpoints();
     app.MapHomeEndpoints();
     app.MapGuideEndpoints();

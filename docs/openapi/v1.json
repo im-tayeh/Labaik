@@ -2882,6 +2882,398 @@
         }
       }
     },
+    "/api/v1/chats": {
+      "get": {
+        "tags": [
+          "Direct chat"
+        ],
+        "summary": "List my direct conversations",
+        "operationId": "GetMyConversations",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConversationDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error: RFC 9457 ProblemDetails with \u0022code\u0022 (see components.schemas.ProblemDetails).",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/chats/direct": {
+      "post": {
+        "tags": [
+          "Direct chat"
+        ],
+        "summary": "Open an existing or new conversation with a linked supervisor or pilgrim",
+        "operationId": "StartDirectChat",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartDirectChatRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error: RFC 9457 ProblemDetails with \u0022code\u0022 (see components.schemas.ProblemDetails).",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/chats/{conversationId}/messages": {
+      "get": {
+        "tags": [
+          "Direct chat"
+        ],
+        "summary": "Read direct message history (participants only)",
+        "operationId": "GetDirectMessages",
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "take",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DirectMessageDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error: RFC 9457 ProblemDetails with \u0022code\u0022 (see components.schemas.ProblemDetails).",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Direct chat"
+        ],
+        "summary": "Send a direct message; notifies the recipient in realtime",
+        "operationId": "SendDirectMessage",
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendDirectMessageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DirectMessageDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error: RFC 9457 ProblemDetails with \u0022code\u0022 (see components.schemas.ProblemDetails).",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/chats/{conversationId}/messages/read": {
+      "post": {
+        "tags": [
+          "Direct chat"
+        ],
+        "summary": "Mark direct messages read up to now",
+        "operationId": "MarkDirectChatRead",
+        "parameters": [
+          {
+            "name": "conversationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error: RFC 9457 ProblemDetails with \u0022code\u0022 (see components.schemas.ProblemDetails).",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/rituals/steps": {
       "get": {
         "tags": [
@@ -9955,6 +10347,48 @@
           }
         }
       },
+      "ConversationDto": {
+        "required": [
+          "id",
+          "otherUserId",
+          "otherName",
+          "otherPhotoUrl",
+          "lastMessage",
+          "lastMessageAtUtc",
+          "unreadCount"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "otherUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "otherName": {
+            "type": "string"
+          },
+          "otherPhotoUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastMessage": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastMessageAtUtc": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "unreadCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
       "CreateCompanyCommand": {
         "type": "object",
         "properties": {
@@ -10238,6 +10672,46 @@
             "type": "integer",
             "format": "int32",
             "nullable": true
+          }
+        }
+      },
+      "DirectMessageDto": {
+        "required": [
+          "id",
+          "conversationId",
+          "senderId",
+          "senderName",
+          "body",
+          "sentAtUtc",
+          "isRead"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "conversationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "senderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "senderName": {
+            "type": "string",
+            "nullable": true
+          },
+          "body": {
+            "type": "string"
+          },
+          "sentAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "isRead": {
+            "type": "boolean"
           }
         }
       },
@@ -11802,10 +12276,11 @@
           11,
           12,
           13,
-          14
+          14,
+          15
         ],
         "type": "integer",
-        "description": "1 = AnnouncementPosted, 2 = MemberJoinedGroup, 3 = GroupCreated, 4 = SupervisorActivated, 5 = GroupWithoutSupervisor, 6 = GatheringPointChanged, 7 = PilgrimArrived, 8 = GroupMessagePosted, 9 = SupervisorMessagePosted, 10 = EmergencyReported, 11 = LostChildReported, 12 = FamilyMemberJoined, 13 = MemberAddedBySupervisor, 14 = MemberRemovedBySupervisor",
+        "description": "1 = AnnouncementPosted, 2 = MemberJoinedGroup, 3 = GroupCreated, 4 = SupervisorActivated, 5 = GroupWithoutSupervisor, 6 = GatheringPointChanged, 7 = PilgrimArrived, 8 = GroupMessagePosted, 9 = SupervisorMessagePosted, 10 = EmergencyReported, 11 = LostChildReported, 12 = FamilyMemberJoined, 13 = MemberAddedBySupervisor, 14 = MemberRemovedBySupervisor, 15 = DirectMessageReceived",
         "format": "int32",
         "x-enum-varnames": [
           "AnnouncementPosted",
@@ -11821,7 +12296,8 @@
           "LostChildReported",
           "FamilyMemberJoined",
           "MemberAddedBySupervisor",
-          "MemberRemovedBySupervisor"
+          "MemberRemovedBySupervisor",
+          "DirectMessageReceived"
         ]
       },
       "PilgrimageType": {
@@ -12358,6 +12834,17 @@
           }
         }
       },
+      "SendDirectMessageRequest": {
+        "required": [
+          "body"
+        ],
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": "string"
+          }
+        }
+      },
       "SetAttendanceRequest": {
         "required": [
           "status"
@@ -12438,6 +12925,18 @@
           "notes": {
             "type": "string",
             "nullable": true
+          }
+        }
+      },
+      "StartDirectChatRequest": {
+        "required": [
+          "userId"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -13138,6 +13637,9 @@
     },
     {
       "name": "Groups"
+    },
+    {
+      "name": "Direct chat"
     },
     {
       "name": "Rituals"

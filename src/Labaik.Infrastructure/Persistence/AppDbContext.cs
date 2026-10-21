@@ -35,6 +35,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Announcement> Announcements => Set<Announcement>();
     public DbSet<LocationShare> LocationShares => Set<LocationShare>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+    public DbSet<Conversation> Conversations => Set<Conversation>();
+    public DbSet<DirectMessage> DirectMessages => Set<DirectMessage>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<Company> Companies => Set<Company>();
     public DbSet<Trip> Trips => Set<Trip>();

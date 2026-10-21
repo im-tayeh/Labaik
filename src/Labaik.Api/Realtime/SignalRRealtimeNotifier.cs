@@ -1,6 +1,7 @@
 using Labaik.Application.Common.Interfaces;
 using Labaik.Application.Features.Chat.Dtos;
 using Labaik.Application.Features.Notifications.Dtos;
+using Labaik.Application.Features.DirectChat;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Labaik.Api.Realtime;
@@ -16,6 +17,10 @@ internal sealed class SignalRRealtimeNotifier(
     public Task ChatMessageDeletedAsync(Guid groupId, Guid messageId, CancellationToken cancellationToken = default)
         => SafeSendAsync("MessageDeleted", () =>
             hubContext.Clients.Group(GroupSubscribedHub.GroupName(groupId)).SendAsync("MessageDeleted", messageId, cancellationToken));
+
+    public Task DirectMessageReceivedAsync(Guid recipientId, DirectMessageDto message, CancellationToken cancellationToken = default)
+        => SafeSendAsync("DirectMessageReceived", () =>
+            hubContext.Clients.User(recipientId.ToString()).SendAsync("DirectMessageReceived", message, cancellationToken));
 
     public Task NotificationCreatedAsync(Guid userId, NotificationDto notification, CancellationToken cancellationToken = default)
         => SafeSendAsync("NotificationReceived", () =>

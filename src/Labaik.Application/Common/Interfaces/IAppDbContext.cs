@@ -26,6 +26,8 @@ public interface IAppDbContext
     DbSet<Announcement> Announcements { get; }
     DbSet<LocationShare> LocationShares { get; }
     DbSet<ChatMessage> ChatMessages { get; }
+    DbSet<Conversation> Conversations { get; }
+    DbSet<DirectMessage> DirectMessages { get; }
     DbSet<Notification> Notifications { get; }
     DbSet<Company> Companies { get; }
     DbSet<Trip> Trips { get; }

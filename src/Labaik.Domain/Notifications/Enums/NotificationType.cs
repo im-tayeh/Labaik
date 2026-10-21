@@ -19,5 +19,6 @@ public enum NotificationType
                                 //    (referenceId = report id, preview = description)
     FamilyMemberJoined = 12,    // -> family circle owner (referenceId = circle id, preview = new member name)
     MemberAddedBySupervisor = 13, // -> company owner when a supervisor adds a pilgrim
-    MemberRemovedBySupervisor = 14 // -> company owner when a supervisor removes a pilgrim
+    MemberRemovedBySupervisor = 14, // -> company owner when a supervisor removes a pilgrim
+    DirectMessageReceived = 15 // -> supervisor when a pilgrim sends a direct message
 }
