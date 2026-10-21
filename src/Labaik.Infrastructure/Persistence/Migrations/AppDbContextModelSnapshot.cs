@@ -669,6 +669,36 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                     b.ToTable("MapPlaces", (string)null);
                 });
 
+            modelBuilder.Entity("Labaik.Domain.Notifications.DeviceToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Platform")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(4096)
+                        .HasColumnType("character varying(4096)");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("DeviceTokens", (string)null);
+                });
+
             modelBuilder.Entity("Labaik.Domain.Notifications.Notification", b =>
                 {
                     b.Property<Guid>("Id")

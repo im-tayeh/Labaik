@@ -38,6 +38,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Conversation> Conversations => Set<Conversation>();
     public DbSet<DirectMessage> DirectMessages => Set<DirectMessage>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<DeviceToken> DeviceTokens => Set<DeviceToken>();
     public DbSet<Company> Companies => Set<Company>();
     public DbSet<Trip> Trips => Set<Trip>();
     public DbSet<PilgrimProfile> PilgrimProfiles => Set<PilgrimProfile>();

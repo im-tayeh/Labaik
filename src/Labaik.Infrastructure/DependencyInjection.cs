@@ -6,6 +6,10 @@ using Labaik.Infrastructure.Identity;
 using Labaik.Infrastructure.Persistence;
 using Labaik.Infrastructure.Persistence.Interceptors;
 using Labaik.Infrastructure.Storage;
+using Labaik.Infrastructure.Notifications;
+using FirebaseAdmin;
+using FirebaseAdmin.Messaging;
+using Google.Apis.Auth.OAuth2;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -33,6 +37,20 @@ public static class DependencyInjection
         });
 
         services.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+
+        var firebaseCredentials = configuration["Firebase:CredentialsJson"];
+        if (string.IsNullOrWhiteSpace(firebaseCredentials))
+        {
+            services.AddSingleton<IPushSender, NoopPushSender>();
+        }
+        else
+        {
+            var firebaseCredential = CredentialFactory.FromJson(firebaseCredentials, "service_account");
+            var firebaseApp = FirebaseApp.Create(new AppOptions { Credential = firebaseCredential });
+            services.AddSingleton(firebaseApp);
+            services.AddSingleton(FirebaseMessaging.GetMessaging(firebaseApp));
+            services.AddScoped<IPushSender, FcmPushSender>();
+        }
 
         services.AddDataProtection();
 

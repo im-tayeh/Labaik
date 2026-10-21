@@ -8,7 +8,8 @@ namespace Labaik.Api.Realtime;
 
 internal sealed class SignalRRealtimeNotifier(
     IHubContext<EventsHub> hubContext,
-    ILogger<SignalRRealtimeNotifier> logger) : IRealtimeNotifier
+    ILogger<SignalRRealtimeNotifier> logger,
+    IPushSender pushSender) : IRealtimeNotifier
 {
     public Task ChatMessageSentAsync(Guid groupId, ChatMessageDto message, CancellationToken cancellationToken = default)
         => SafeSendAsync("MessageReceived", () =>
@@ -22,9 +23,19 @@ internal sealed class SignalRRealtimeNotifier(
         => SafeSendAsync("DirectMessageReceived", () =>
             hubContext.Clients.User(recipientId.ToString()).SendAsync("DirectMessageReceived", message, cancellationToken));
 
-    public Task NotificationCreatedAsync(Guid userId, NotificationDto notification, CancellationToken cancellationToken = default)
-        => SafeSendAsync("NotificationReceived", () =>
+    public async Task NotificationCreatedAsync(Guid userId, NotificationDto notification, CancellationToken cancellationToken = default)
+    {
+        await SafeSendAsync("NotificationReceived", () =>
             hubContext.Clients.User(userId.ToString()).SendAsync("NotificationReceived", notification, cancellationToken));
+        try
+        {
+            await pushSender.SendAsync(userId, notification.Type, notification.ReferenceId, notification.Preview, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Push notification delivery failed for user {UserId}.", userId);
+        }
+    }
 
     // Best effort: the change is already saved, so a push failure is logged, never thrown.
     private async Task SafeSendAsync(string method, Func<Task> send)

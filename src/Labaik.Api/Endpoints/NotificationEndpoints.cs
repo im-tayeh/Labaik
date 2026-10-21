@@ -8,6 +8,7 @@ using Labaik.Application.Features.Notifications.Commands.MarkAllNotificationsRea
 using Labaik.Application.Features.Notifications.Commands.MarkNotificationRead;
 using Labaik.Application.Features.Notifications.Queries.GetMyNotifications;
 using Labaik.Application.Features.Notifications.Queries.GetUnreadNotificationCount;
+using Labaik.Application.Features.Notifications.Commands.ManageDeviceToken;
 using MediatR;
 
 namespace Labaik.Api.Endpoints;
@@ -59,6 +60,22 @@ public static class NotificationEndpoints
         .WithName("MarkAllNotificationsRead")
         .WithSummary("Mark all my notifications as read")
         .ReturnsNoContent().Fails(401);
+
+        group.MapPut("/devices", async (DeviceTokenRequest body, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new RegisterDeviceTokenCommand(body.Token, body.Platform), ct);
+            return result.IsSuccess ? Results.NoContent() : result.Error!.ToProblem();
+        }).WithName("RegisterNotificationDevice")
+        .WithSummary("Register or update this device's FCM token")
+        .ReturnsNoContent().Fails(400, 401).Validates();
+
+        group.MapDelete("/devices/{token}", async (string token, ISender sender, CancellationToken ct) =>
+        {
+            var result = await sender.Send(new RemoveDeviceTokenCommand(token), ct);
+            return result.IsSuccess ? Results.NoContent() : result.Error!.ToProblem();
+        }).WithName("RemoveNotificationDevice")
+        .WithSummary("Remove this device's FCM token")
+        .ReturnsNoContent().Fails(400, 401).Validates();
 
         return app;
     }

@@ -29,6 +29,7 @@ public interface IAppDbContext
     DbSet<Conversation> Conversations { get; }
     DbSet<DirectMessage> DirectMessages { get; }
     DbSet<Notification> Notifications { get; }
+    DbSet<DeviceToken> DeviceTokens { get; }
     DbSet<Company> Companies { get; }
     DbSet<Trip> Trips { get; }
     DbSet<PilgrimProfile> PilgrimProfiles { get; }
