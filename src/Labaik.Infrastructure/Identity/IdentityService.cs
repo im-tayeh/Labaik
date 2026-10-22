@@ -21,7 +21,8 @@ internal sealed class IdentityService(
     ILogger<IdentityService> logger,
     IAppDbContext context,
     TimeProvider timeProvider,
-    IAccountAccessCache accessCache) : IIdentityService
+    IAccountAccessCache accessCache,
+    IRealtimeNotifier notifier) : IIdentityService
 {
     public async Task<Result<Guid>> CreateUserAsync(string fullName, string email, string password, CancellationToken cancellationToken = default)
     {
@@ -463,8 +464,12 @@ internal sealed class IdentityService(
         await userManager.SetLockoutEnabledAsync(user, true);
         var updated = await userManager.SetLockoutEndDateAsync(user, disabled ? DateTimeOffset.MaxValue : null);
         if (!updated.Succeeded) return Result.Failure(IdentityFailure("Auth.AccountDisabled", updated));
-        if (disabled) await refreshTokenService.RevokeAllForUserAsync(user.Id, cancellationToken);
         accessCache.Reset();
+        if (disabled)
+        {
+            await refreshTokenService.RevokeAllForUserAsync(user.Id, cancellationToken);
+            await notifier.AccountBlockedAsync(user.Id, "Auth.AccountDisabled", cancellationToken);
+        }
         return Result.Success();
     }
 
@@ -483,11 +488,13 @@ internal sealed class IdentityService(
 
     public async Task<Result> ForgotPasswordAsync(string email, CancellationToken cancellationToken = default)
     {
-        var user = await userManager.FindByEmailAsync(email);
+        var user = await userManager.FindByEmailAsync(email.Trim());
         if (user is not null)
         {
+            // A throttled request or a failed send is not reported (no user enumeration); a failed send
+            // leaves no pending code, so the next request is not throttled.
             await verificationCodeService.GenerateAndSendAsync(
-                user.Id, email, VerificationPurpose.PasswordReset, cancellationToken);
+                user.Id, user.Email!, VerificationPurpose.PasswordReset, cancellationToken);
         }
         return Result.Success(); // always 200: no user enumeration
     }
@@ -495,10 +502,17 @@ internal sealed class IdentityService(
     public async Task<Result> ResetPasswordAsync(
         string email, string code, string newPassword, CancellationToken cancellationToken = default)
     {
-        var user = await userManager.FindByEmailAsync(email);
+        var user = await userManager.FindByEmailAsync(email.Trim());
         if (user is null)
         {
             return Result.Failure(Error.Failure("Otp.Invalid", "The verification code is incorrect."));
+        }
+
+        // Check the new password before using up the code: a weak password must not cost the user their code.
+        foreach (var validator in userManager.PasswordValidators)
+        {
+            var check = await validator.ValidateAsync(userManager, user, newPassword);
+            if (!check.Succeeded) return Result.Failure(Error.Validation("Auth.WeakPassword", string.Join(" ", check.Errors.Select(e => e.Description))));
         }
 
         var validation = await verificationCodeService.ValidateAsync(
@@ -517,6 +531,7 @@ internal sealed class IdentityService(
         }
 
         user.MustChangePassword = false;
+        user.EmailConfirmed = true; // the code reached this mailbox, so a never-verified signup can sign in now
         var updated = await userManager.UpdateAsync(user);
         if (!updated.Succeeded) return Result.Failure(IdentityFailure("Auth.ResetFailed", updated));
 

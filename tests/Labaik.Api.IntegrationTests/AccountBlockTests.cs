@@ -2,6 +2,8 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Labaik.Api.IntegrationTests.Infrastructure;
+using Microsoft.AspNetCore.Http.Connections;
+using Microsoft.AspNetCore.SignalR.Client;
 
 namespace Labaik.Api.IntegrationTests;
 
@@ -56,6 +58,64 @@ public class AccountBlockTests(LabaikApiFactory factory)
 
         Assert.Equal(HttpStatusCode.NoContent, (await admin.Client.PostAsync($"/api/v1/admin/users/{pilgrim.Id}/disable", null)).StatusCode);
         await AssertBlockedAsync(pilgrim.Client.GetAsync("/api/v1/notifications"), "Auth.AccountDisabled");
+    }
+
+    [Fact]
+    public async Task Signed_in_apps_get_AccountBlocked_at_once_when_the_company_is_stopped_or_the_supervisor_suspended()
+    {
+        var admin = await TestUsers.GetAdminAsync(factory);
+        var (company, companyId) = await TestUsers.CreateCompanyAsync(factory);
+        var supervisor = await TestUsers.CreateAsync(factory);
+        await TestUsers.AddToRosterAsync(company, supervisor);
+        supervisor = await TestUsers.RefreshAsync(factory, supervisor);
+
+        await using var supervisorHub = await ConnectAsync(supervisor);
+        var suspended = supervisorHub.Next();
+        Assert.Equal(HttpStatusCode.NoContent, (await company.Client.PostAsync($"/api/v1/company/supervisors/{supervisor.Id}/disable", null)).StatusCode);
+        Assert.Equal("Supervisor.Suspended", await suspended.WaitAsync(TimeSpan.FromSeconds(10)));
+        Assert.Equal(HttpStatusCode.NoContent, (await company.Client.PostAsync($"/api/v1/company/supervisors/{supervisor.Id}/enable", null)).StatusCode);
+
+        await using var ownerHub = await ConnectAsync(company);
+        var stopped = ownerHub.Next();
+        Assert.Equal(HttpStatusCode.OK, (await admin.Client.PostAsync($"/api/v1/admin/companies/{companyId}/stop", null)).StatusCode);
+        Assert.Equal("Company.Stopped", await stopped.WaitAsync(TimeSpan.FromSeconds(10)));
+        Assert.Equal(HttpStatusCode.OK, (await admin.Client.PostAsync($"/api/v1/admin/companies/{companyId}/resume", null)).StatusCode);
+    }
+
+    // A client on /hubs/events (LongPolling over the test server) that records "AccountBlocked" codes.
+    private async Task<BlockListener> ConnectAsync(TestUser user)
+    {
+        var connection = new HubConnectionBuilder()
+            .WithUrl(new Uri(factory.Server.BaseAddress, "/hubs/events"), options =>
+            {
+                options.Transports = HttpTransportType.LongPolling;
+                options.HttpMessageHandlerFactory = _ => factory.Server.CreateHandler();
+                options.AccessTokenProvider = () => Task.FromResult<string?>(user.AccessToken);
+            })
+            .Build();
+        var listener = new BlockListener(connection);
+        await connection.StartAsync();
+        return listener;
+    }
+
+    private sealed class BlockListener : IAsyncDisposable
+    {
+        private readonly HubConnection _connection;
+        private TaskCompletionSource<string> _next = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public BlockListener(HubConnection connection)
+        {
+            _connection = connection;
+            connection.On<JsonElement>("AccountBlocked", payload => _next.TrySetResult(payload.GetProperty("code").GetString()!));
+        }
+
+        public Task<string> Next()
+        {
+            _next = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+            return _next.Task;
+        }
+
+        public ValueTask DisposeAsync() => _connection.DisposeAsync();
     }
 
     private static async Task AssertBlockedAsync(Task<HttpResponseMessage> request, string code)

@@ -48,6 +48,9 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<LostChildReport> LostChildReports => Set<LostChildReport>();
     public DbSet<FamilyCircle> FamilyCircles => Set<FamilyCircle>();
 
+    public Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+        => Database.BeginTransactionAsync(cancellationToken);
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

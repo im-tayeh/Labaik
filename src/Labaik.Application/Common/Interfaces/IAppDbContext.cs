@@ -40,4 +40,7 @@ public interface IAppDbContext
     DbSet<FamilyCircle> FamilyCircles { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+
+    // For the rare command that mixes bulk ExecuteDelete/ExecuteUpdate with SaveChanges and must be all-or-nothing.
+    Task<Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
 }

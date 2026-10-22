@@ -145,6 +145,8 @@ namespace Labaik.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ParticipantBId");
+
                     b.HasIndex("ParticipantAId", "ParticipantBId")
                         .IsUnique();
 
@@ -364,6 +366,8 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                     b.HasIndex("JoinCode")
                         .IsUnique();
 
+                    b.HasIndex("LeaderId");
+
                     b.HasIndex("TripId");
 
                     b.ToTable("Groups", (string)null);
@@ -479,6 +483,10 @@ namespace Labaik.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("TokenHash");
+
+                    b.HasIndex("UserId");
+
                     b.ToTable("RefreshTokens");
                 });
 
@@ -512,6 +520,8 @@ namespace Labaik.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("UserId", "Purpose");
+
                     b.ToTable("VerificationCodes");
                 });
 
@@ -537,6 +547,8 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Journeys", (string)null);
                 });
@@ -1225,11 +1237,11 @@ namespace Labaik.Infrastructure.Persistence.Migrations
                             b1.Property<Guid>("CompanyId")
                                 .HasColumnType("uuid");
 
-                            b1.Property<Guid?>("ProvisionedByCompanyId")
-                                .HasColumnType("uuid");
-
                             b1.Property<bool>("IsSuspended")
                                 .HasColumnType("boolean");
+
+                            b1.Property<Guid?>("ProvisionedByCompanyId")
+                                .HasColumnType("uuid");
 
                             b1.Property<Guid>("UserId")
                                 .HasColumnType("uuid");

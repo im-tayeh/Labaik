@@ -23,19 +23,29 @@ internal sealed class SignalRRealtimeNotifier(
         => SafeSendAsync("DirectMessageReceived", () =>
             hubContext.Clients.User(recipientId.ToString()).SendAsync("DirectMessageReceived", message, cancellationToken));
 
-    public async Task NotificationCreatedAsync(Guid userId, NotificationDto notification, CancellationToken cancellationToken = default)
+    public async Task NotificationsCreatedAsync(IReadOnlyList<(Guid UserId, NotificationDto Notification)> notifications,
+        CancellationToken cancellationToken = default)
     {
-        await SafeSendAsync("NotificationReceived", () =>
-            hubContext.Clients.User(userId.ToString()).SendAsync("NotificationReceived", notification, cancellationToken));
+        if (notifications.Count == 0) return;
+        foreach (var (userId, notification) in notifications)
+        {
+            await SafeSendAsync("NotificationReceived", () =>
+                hubContext.Clients.User(userId.ToString()).SendAsync("NotificationReceived", notification, cancellationToken));
+        }
+        var first = notifications[0].Notification;
         try
         {
-            await pushSender.SendAsync(userId, notification.Type, notification.ReferenceId, notification.Preview, cancellationToken);
+            await pushSender.SendAsync(notifications.Select(n => n.UserId).ToList(), first.Type, first.ReferenceId, first.Preview, cancellationToken);
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Push notification delivery failed for user {UserId}.", userId);
+            logger.LogWarning(ex, "Push notification delivery failed for {Count} users.", notifications.Count);
         }
     }
+
+    public Task AccountBlockedAsync(Guid userId, string code, CancellationToken cancellationToken = default)
+        => SafeSendAsync("AccountBlocked", () =>
+            hubContext.Clients.User(userId.ToString()).SendAsync("AccountBlocked", new { code }, cancellationToken));
 
     // Best effort: the change is already saved, so a push failure is logged, never thrown.
     private async Task SafeSendAsync(string method, Func<Task> send)

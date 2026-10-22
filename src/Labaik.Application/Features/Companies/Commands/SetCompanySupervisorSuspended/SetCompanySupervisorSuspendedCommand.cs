@@ -1,4 +1,5 @@
 ﻿using Labaik.Application.Common.Interfaces;
+using Labaik.Application.Common.Security;
 using Labaik.Application.Features.Companies.Common;
 using Labaik.Application.Features.Notifications.EventHandlers;
 using Labaik.Domain.Common.Results;
@@ -10,7 +11,8 @@ namespace Labaik.Application.Features.Companies.Commands.SetCompanySupervisorSus
 
 // A company suspends (or reactivates) a supervisor on its roster. A supervisor suspended by every
 // company they are on cannot sign in or refresh (403 Supervisor.Suspended); suspending also revokes
-// their refresh tokens, and the access token they hold stops working on the next request (AccountBlockMiddleware).
+// their refresh tokens, the access token they hold stops working on the next request (AccountBlockMiddleware)
+// and their signed-in app gets "AccountBlocked" and signs out at once.
 // The company owner and the supervisor get notification 16 (suspended) or 17 (reactivated).
 public sealed record SetCompanySupervisorSuspendedCommand(Guid UserId, bool Suspended) : IRequest<Result>;
 
@@ -21,7 +23,8 @@ public sealed class SetCompanySupervisorSuspendedCommandHandler(
     IUserDirectory userDirectory,
     IRealtimeNotifier notifier,
     TimeProvider timeProvider,
-    IAccountAccessCache accessCache) : IRequestHandler<SetCompanySupervisorSuspendedCommand, Result>
+    IAccountAccessCache accessCache,
+    IIdentityService identityService) : IRequestHandler<SetCompanySupervisorSuspendedCommand, Result>
 {
     public async Task<Result> Handle(SetCompanySupervisorSuspendedCommand request, CancellationToken cancellationToken)
     {
@@ -46,6 +49,7 @@ public sealed class SetCompanySupervisorSuspendedCommandHandler(
         if (request.Suspended)
         {
             await refreshTokenService.RevokeAllForUserAsync(request.UserId, cancellationToken);
+            await AccountBlockPush.PushAsync(identityService, notifier, [request.UserId], cancellationToken);
         }
 
         if (company.EnabledServices.InstantNotifications)

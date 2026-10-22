@@ -85,6 +85,50 @@ public class AuthTests(LabaikApiFactory factory)
     }
 
     [Fact]
+    public async Task A_weak_new_password_does_not_use_up_the_reset_code()
+    {
+        var user = await TestUsers.CreateAsync(factory);
+        var anonymous = factory.CreateClient();
+        Assert.Equal(HttpStatusCode.OK, (await anonymous.PostAsJsonAsync("/api/v1/auth/forgot-password", new { email = $" {user.Email} " })).StatusCode);
+        var code = factory.Emails.LastCodeFor(user.Email);
+
+        var weak = await anonymous.PostAsJsonAsync("/api/v1/auth/reset-password", new { email = user.Email, code, newPassword = "Password1" });
+        Assert.Equal(HttpStatusCode.BadRequest, weak.StatusCode);
+        Assert.Equal("Auth.WeakPassword", (await weak.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
+
+        var strong = await anonymous.PostAsJsonAsync("/api/v1/auth/reset-password", new { email = user.Email, code, newPassword = "Password1!" });
+        Assert.Equal(HttpStatusCode.OK, strong.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await anonymous.PostAsJsonAsync("/api/v1/auth/login", new { email = user.Email, password = "Password1!" })).StatusCode);
+    }
+
+    [Fact]
+    public async Task Resetting_the_password_of_a_never_verified_signup_lets_it_sign_in()
+    {
+        var email = $"unverified-{Guid.NewGuid():N}@labaik.test";
+        var anonymous = factory.CreateClient();
+        Assert.Equal(HttpStatusCode.OK, (await anonymous.PostAsJsonAsync("/api/v1/auth/register", new { fullName = "Never Verified", email, password = TestUsers.Password })).StatusCode);
+
+        Assert.Equal(HttpStatusCode.OK, (await anonymous.PostAsJsonAsync("/api/v1/auth/forgot-password", new { email })).StatusCode);
+        var reset = await anonymous.PostAsJsonAsync("/api/v1/auth/reset-password", new { email, code = factory.Emails.LastCodeFor(email), newPassword = "Changed-Pass3!" });
+        Assert.Equal(HttpStatusCode.OK, reset.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await anonymous.PostAsJsonAsync("/api/v1/auth/login", new { email, password = "Changed-Pass3!" })).StatusCode);
+    }
+
+    [Fact]
+    public async Task A_blocked_token_sent_along_does_not_block_public_auth_endpoints()
+    {
+        var admin = await TestUsers.GetAdminAsync(factory);
+        var user = await TestUsers.CreateAsync(factory);
+        Assert.Equal(HttpStatusCode.NoContent, (await admin.Client.PostAsync($"/api/v1/admin/users/{user.Id}/disable", null)).StatusCode);
+
+        // the app may still attach the old token: forgot-password must work and login must give the real reason
+        Assert.Equal(HttpStatusCode.OK, (await user.Client.PostAsJsonAsync("/api/v1/auth/forgot-password", new { email = user.Email })).StatusCode);
+        var login = await user.Client.PostAsJsonAsync("/api/v1/auth/login", new { email = user.Email, password = TestUsers.Password });
+        Assert.Equal(HttpStatusCode.Forbidden, login.StatusCode);
+        Assert.Equal("Auth.AccountDisabled", (await login.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
+    }
+
+    [Fact]
     public async Task Refresh_token_is_single_use()
     {
         var user = await TestUsers.CreateAsync(factory);

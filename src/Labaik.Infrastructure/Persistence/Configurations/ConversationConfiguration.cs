@@ -11,5 +11,6 @@ internal sealed class ConversationConfiguration : IEntityTypeConfiguration<Conve
         builder.ToTable("Conversations");
         builder.HasKey(c => c.Id);
         builder.HasIndex(c => new { c.ParticipantAId, c.ParticipantBId }).IsUnique();
+        builder.HasIndex(c => c.ParticipantBId); // /chats looks up A == me OR B == me
     }
 }

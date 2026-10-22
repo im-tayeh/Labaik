@@ -105,9 +105,6 @@ internal static class NotificationWriter
         context.Notifications.AddRange(created);
         await context.SaveChangesAsync(cancellationToken);
 
-        foreach (var n in created)
-        {
-            await notifier.NotificationCreatedAsync(n.UserId, n.ToDto(), cancellationToken);
-        }
+        await notifier.NotificationsCreatedAsync(created.Select(n => (n.UserId, n.ToDto())).ToList(), cancellationToken);
     }
 }

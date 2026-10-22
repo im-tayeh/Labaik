@@ -11,6 +11,7 @@ internal sealed class JourneyConfiguration : IEntityTypeConfiguration<Journey>
         builder.ToTable("Journeys");
         builder.HasKey(j => j.Id);
         builder.Property(j => j.UserId).IsRequired();
+        builder.HasIndex(j => j.UserId); // /home and /journeys/me
 
         // ArrivalPlan is a value object -> owned (stored in the same row, nullable).
         builder.OwnsOne(j => j.ArrivalPlan, a =>

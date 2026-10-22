@@ -5,6 +5,7 @@ using Labaik.Domain.Identity;
 using Labaik.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Labaik.Infrastructure.Identity;
 
@@ -12,7 +13,8 @@ internal sealed class VerificationCodeService(
     AppDbContext dbContext,
     IPasswordHasher<ApplicationUser> passwordHasher,
     IEmailSender emailSender,
-    TimeProvider timeProvider) : IVerificationCodeService
+    TimeProvider timeProvider,
+    ILogger<VerificationCodeService> logger) : IVerificationCodeService
 {
     private static readonly TimeSpan ResendCooldown = TimeSpan.FromSeconds(55);
     private static readonly TimeSpan CodeLifetime = TimeSpan.FromMinutes(15);
@@ -45,9 +47,20 @@ internal sealed class VerificationCodeService(
         dbContext.VerificationCodes.Add(verificationCode);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        await emailSender.SendAsync(
-            email, "Your Labaik verification code",
-            $"Your verification code is: {newCode}. It expires in {CodeLifetime.TotalMinutes:0} minutes.", cancellationToken);
+        try
+        {
+            await emailSender.SendAsync(
+                email, "Your Labaik verification code",
+                $"Your verification code is: {newCode}. It expires in {CodeLifetime.TotalMinutes:0} minutes.", cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Never delivered: drop it so the user can ask again right away (no cooldown) instead of a 500.
+            logger.LogWarning(ex, "Sending the {Purpose} code failed.", purpose);
+            verificationCode.MarkUsed();
+            await dbContext.SaveChangesAsync(CancellationToken.None);
+            return Result.Failure(Error.Failure("Email.SendFailed", "The verification email could not be sent. Try again."));
+        }
 
         return Result.Success();
     }

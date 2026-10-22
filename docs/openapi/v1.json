@@ -5491,7 +5491,7 @@
         "tags": [
           "Admin"
         ],
-        "summary": "Suspend a company (status 2 Stopped; idempotent; nothing else is enforced yet)",
+        "summary": "Suspend a company (status 2 Stopped; idempotent): its owner and supervisors on no other active company are signed out at once (403 Company.Stopped, realtime AccountBlocked)",
         "operationId": "StopCompany",
         "parameters": [
           {

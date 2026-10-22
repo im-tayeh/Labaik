@@ -23,6 +23,7 @@ internal sealed class AccountBlockMiddleware(RequestDelegate next, IMemoryCache 
         var sub = context.User.FindFirstValue(JwtRegisteredClaimNames.Sub);
         var path = context.Request.Path.Value ?? string.Empty;
         if (context.User.Identity?.IsAuthenticated == true && Guid.TryParse(sub, out var userId)
+            && EndpointAccess.RequiresAuthorization(context)
             && !AllowedSuffixes.Any(s => path.EndsWith(s, StringComparison.OrdinalIgnoreCase)))
         {
             var block = await cache.GetOrCreateAsync(keys.Key(userId), entry =>
