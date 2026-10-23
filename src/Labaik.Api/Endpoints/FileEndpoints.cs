@@ -15,7 +15,7 @@ public static class FileEndpoints
         var group = app.MapGroup("/api/v{version:apiVersion}/files")
             .WithApiVersionSet(versionSet).WithTags("Files").RequireAuthorization();
 
-        group.MapPost("/", async (IFormFile? file, IFileStorage storage, CancellationToken ct) =>
+        group.MapPost("/", async (IFormFile? file, IFileStorage storage, HttpRequest request, CancellationToken ct) =>
         {
             if (file is null) return Labaik.Domain.Common.Results.Error.Validation("File.UnsupportedType", "A file is required.").ToProblem();
 
@@ -39,7 +39,7 @@ public static class FileEndpoints
 
             content.Position = 0;
             var url = await storage.UploadAsync(content, file.ContentType, extension, ct);
-            return Results.Ok(new FileUploadDto(url));
+            return Results.Ok(new FileUploadDto(AbsoluteUrl(url, request)));
         })
         .RequireAuthorization()
         .DisableAntiforgery()
@@ -47,7 +47,30 @@ public static class FileEndpoints
         .WithSummary("Upload an image (5 MB) or PDF (10 MB) and return its public URL")
         .Returns<FileUploadDto>().Fails(400, 401).Validates();
 
+        // Files kept in the database (no object storage configured). Public like object-storage URLs:
+        // images load in <img>/Image.network without a token, and the id is an unguessable GUID.
+        group.MapGet("/{id:guid}", async (Guid id, IFileStorage storage, HttpResponse response, CancellationToken ct) =>
+        {
+            var file = await storage.ReadAsync(id, ct);
+            if (file is null) return Results.NotFound();
+            response.Headers.CacheControl = "public, max-age=31536000, immutable";
+            return Results.File(file.Content, file.ContentType);
+        })
+        .AllowAnonymous()
+        .WithName("GetStoredFile")
+        .ExcludeFromDescription(); // binary download behind the URL UploadFile returns, not part of the JSON contract
+
         return app;
+    }
+
+    // Database storage returns a path; the client needs a full URL. Behind Render the request arrives as
+    // http (TLS ends at the proxy), so anything that is not a local run is https.
+    private static string AbsoluteUrl(string url, HttpRequest request)
+    {
+        if (!url.StartsWith('/')) return url;
+        var host = request.Host.Host;
+        var scheme = host is "localhost" or "127.0.0.1" ? request.Scheme : Uri.UriSchemeHttps;
+        return $"{scheme}://{request.Host}{url}";
     }
 
     private static bool HasExpectedSignature(ReadOnlySpan<byte> bytes, string contentType) => contentType.ToLowerInvariant() switch

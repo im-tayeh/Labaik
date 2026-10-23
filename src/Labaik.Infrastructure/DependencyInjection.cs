@@ -66,7 +66,15 @@ public static class DependencyInjection
 
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddOptions<StorageSettings>().Bind(configuration.GetSection(StorageSettings.SectionName));
-        services.AddScoped<IFileStorage, S3FileStorage>();
+        // Object storage when Storage:* is fully configured, otherwise the database (no extra service needed)
+        if (configuration.GetSection(StorageSettings.SectionName).Get<StorageSettings>()?.IsObjectStorageConfigured == true)
+        {
+            services.AddScoped<IFileStorage, S3FileStorage>();
+        }
+        else
+        {
+            services.AddScoped<IFileStorage, DatabaseFileStorage>();
+        }
         services.AddOptions<AdminSettings>()
             .Bind(configuration.GetSection(AdminSettings.SectionName));
         services.AddScoped<IVerificationCodeService, VerificationCodeService>();
