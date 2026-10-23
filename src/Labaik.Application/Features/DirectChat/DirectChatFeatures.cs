@@ -23,26 +23,29 @@ public sealed class GetMyConversationsQueryHandler(IAppDbContext context, ICurre
     public async Task<Result<IReadOnlyList<ConversationDto>>> Handle(GetMyConversationsQuery request, CancellationToken ct)
     {
         if (currentUser.Id is not { } me) return Error.Unauthorized("Auth.Required", "Authentication is required.");
+        // One query for every conversation with its last message and my unread count (no query per row).
         var conversations = await context.Conversations.AsNoTracking()
             .Where(c => c.ParticipantAId == me || c.ParticipantBId == me)
-            .OrderByDescending(c => c.LastMessageAtUtc ?? c.CreatedAtUtc).ToListAsync(ct);
-        var otherIds = conversations.Select(c => c.OtherThan(me)).Distinct().ToList();
+            .OrderByDescending(c => c.LastMessageAtUtc ?? c.CreatedAtUtc)
+            .Select(c => new
+            {
+                c.Id,
+                Other = c.ParticipantAId == me ? c.ParticipantBId : c.ParticipantAId,
+                c.LastMessageAtUtc,
+                LastBody = context.DirectMessages.Where(m => m.ConversationId == c.Id)
+                    .OrderByDescending(m => m.SentAtUtc).Select(m => m.Body).FirstOrDefault(),
+                Unread = context.DirectMessages.Count(m => m.ConversationId == c.Id && m.SenderId != me
+                    && ((c.ParticipantAId == me ? c.ALastReadAtUtc : c.BLastReadAtUtc) == null
+                        || m.SentAtUtc > (c.ParticipantAId == me ? c.ALastReadAtUtc : c.BLastReadAtUtc)))
+            })
+            .ToListAsync(ct);
+        var otherIds = conversations.Select(c => c.Other).Distinct().ToList();
         var contacts = await userDirectory.GetContactsAsync(otherIds, ct);
         var photos = await context.PilgrimProfiles.AsNoTracking().Where(p => otherIds.Contains(p.UserId) && p.PhotoUrl != null)
             .ToDictionaryAsync(p => p.UserId, p => p.PhotoUrl, ct);
-        var rows = new List<ConversationDto>();
-        foreach (var c in conversations)
-        {
-            var other = c.OtherThan(me);
-            var last = await context.DirectMessages.AsNoTracking().Where(m => m.ConversationId == c.Id)
-                .OrderByDescending(m => m.SentAtUtc).FirstOrDefaultAsync(ct);
-            var readAt = c.LastReadBy(me);
-            var unread = await context.DirectMessages.CountAsync(m => m.ConversationId == c.Id && m.SenderId != me
-                && (readAt == null || m.SentAtUtc > readAt), ct);
-            rows.Add(new ConversationDto(c.Id, other, contacts.GetValueOrDefault(other)?.FullName ?? string.Empty,
-                photos.GetValueOrDefault(other), last?.Body, c.LastMessageAtUtc, unread));
-        }
-        return rows;
+        return conversations.Select(c => new ConversationDto(c.Id, c.Other,
+            contacts.GetValueOrDefault(c.Other)?.FullName ?? string.Empty, photos.GetValueOrDefault(c.Other),
+            c.LastBody, c.LastMessageAtUtc, c.Unread)).ToList();
     }
 }
 
@@ -120,6 +123,12 @@ public sealed class SendDirectMessageCommandHandler(IAppDbContext context, ICurr
         if (currentUser.Id is not { } me) return Error.Unauthorized("Auth.Required", "Authentication is required.");
         var conversation = await context.Conversations.FirstOrDefaultAsync(c => c.Id == request.ConversationId, ct);
         if (conversation is null || !conversation.Has(me)) return Error.NotFound("Chat.ConversationNotFound", "The conversation was not found.");
+        // Same rule as starting a chat, checked on every message: a pilgrim moved out of the group (or a
+        // supervisor replaced) can no longer write in the old conversation, though its history stays readable.
+        var other = conversation.OtherThan(me);
+        var supervisorSent = await context.IsSupervisorOfAsync(me, other, ct);
+        if (!supervisorSent && !await context.IsSupervisorOfAsync(other, me, ct))
+            return Error.Forbidden("Chat.NotAllowed", "You can only message your supervisor or your pilgrims.");
         var now = timeProvider.GetUtcNow();
         var sent = conversation.Post(me, request.Body, now);
         if (sent.IsFailure) return sent.Error!;
@@ -128,7 +137,6 @@ public sealed class SendDirectMessageCommandHandler(IAppDbContext context, ICurr
         var dto = new DirectMessageDto(sent.Value.Id, sent.Value.ConversationId, me,
             await userDirectory.GetFullNameAsync(me, ct), sent.Value.Body, sent.Value.SentAtUtc, false);
         await notifier.DirectMessageReceivedAsync(conversation.OtherThan(me), dto, ct);
-        var supervisorSent = await context.IsSupervisorOfAsync(me, conversation.OtherThan(me), ct);
         var notificationType = supervisorSent ? NotificationType.SupervisorMessagePosted : NotificationType.DirectMessageReceived;
         await NotificationWriter.CreateAndPushAsync(context, notifier, [conversation.OtherThan(me)], notificationType,
             null, dto.Id, dto.Body, now, ct);

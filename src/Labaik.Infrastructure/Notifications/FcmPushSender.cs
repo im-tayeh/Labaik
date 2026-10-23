@@ -9,12 +9,13 @@ namespace Labaik.Infrastructure.Notifications;
 internal sealed class FcmPushSender(IAppDbContext context, FirebaseMessaging messaging,
     ILogger<FcmPushSender> logger) : IPushSender
 {
-    public async Task SendAsync(Guid userId, NotificationType type, Guid? referenceId, string? preview,
+    public async Task SendAsync(IReadOnlyCollection<Guid> userIds, NotificationType type, Guid? referenceId, string? preview,
         CancellationToken cancellationToken = default)
     {
+        if (userIds.Count == 0) return;
         try
         {
-            var tokens = await context.DeviceTokens.AsNoTracking().Where(x => x.UserId == userId)
+            var tokens = await context.DeviceTokens.AsNoTracking().Where(x => userIds.Contains(x.UserId))
                 .Select(x => x.Token).ToListAsync(cancellationToken);
             foreach (var batch in tokens.Chunk(500))
             {
@@ -44,7 +45,7 @@ internal sealed class FcmPushSender(IAppDbContext context, FirebaseMessaging mes
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "FCM delivery failed for user {UserId} and notification type {Type}.", userId, type);
+            logger.LogWarning(ex, "FCM delivery failed for {Count} users and notification type {Type}.", userIds.Count, type);
         }
     }
 }

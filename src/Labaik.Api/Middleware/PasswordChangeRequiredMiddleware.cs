@@ -13,7 +13,8 @@ internal sealed class PasswordChangeRequiredMiddleware(RequestDelegate next)
         var mustChange = context.User.HasClaim("pwd_change", "true");
         var path = context.Request.Path.Value ?? string.Empty;
 
-        if (mustChange && !AllowedSuffixes.Any(s => path.EndsWith(s, StringComparison.OrdinalIgnoreCase)))
+        if (mustChange && EndpointAccess.RequiresAuthorization(context)
+            && !AllowedSuffixes.Any(s => path.EndsWith(s, StringComparison.OrdinalIgnoreCase)))
         {
             await Results.Problem(
                 title: "You must change your password before continuing.",

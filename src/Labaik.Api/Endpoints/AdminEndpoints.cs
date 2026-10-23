@@ -161,7 +161,7 @@ public static class AdminEndpoints
             return result.IsSuccess ? Results.Ok(result.Value) : result.Error!.ToProblem();
         })
         .WithName("StopCompany")
-        .WithSummary("Suspend a company (status 2 Stopped; idempotent; nothing else is enforced yet)")
+        .WithSummary("Suspend a company (status 2 Stopped; idempotent): its owner and supervisors on no other active company are signed out at once (403 Company.Stopped, realtime AccountBlocked)")
         .WithResponseExample(StatusCodes.Status200OK, AdminExamples.Company with
         {
             IsStopped = true,

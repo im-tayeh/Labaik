@@ -20,7 +20,9 @@ internal sealed class IdentityService(
     IOptions<AdminSettings> adminOptions,
     ILogger<IdentityService> logger,
     IAppDbContext context,
-    TimeProvider timeProvider) : IIdentityService
+    TimeProvider timeProvider,
+    IAccountAccessCache accessCache,
+    IRealtimeNotifier notifier) : IIdentityService
 {
     public async Task<Result<Guid>> CreateUserAsync(string fullName, string email, string password, CancellationToken cancellationToken = default)
     {
@@ -164,16 +166,34 @@ internal sealed class IdentityService(
         }
         await EnsureBootstrapAdminAsync(user);
         var roles = await userManager.GetRolesAsync(user);
-        if (!roles.Contains(Roles.Admin))
+        var block = await GetRoleBlockAsync(user.Id, roles);
+        if (block is not null) return block;
+        return new AuthUser(user.Id, user.Email!, user.FullName, roles.ToList(), user.MustChangePassword);
+    }
+
+    // Same checks as token issue, for a token that is already out (AccountBlockMiddleware):
+    // a stopped company, a suspended supervisor or a disabled account lose access on the next request.
+    public async Task<Error?> GetAccessBlockAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var user = await userManager.FindByIdAsync(userId.ToString());
+        if (user is null) return null;
+        if (await userManager.IsLockedOutAsync(user))
         {
-            var block = await GetCompanyBlockAsync(user.Id, roles);
-            if (block is not null) return block;
+            return Error.Forbidden("Auth.AccountDisabled", "This account is disabled.");
         }
-        if (roles.Contains(Roles.Supervisor) && !roles.Contains(Roles.Admin) && await IsSuspendedEverywhereAsync(user.Id))
+        return await GetRoleBlockAsync(user.Id, await userManager.GetRolesAsync(user));
+    }
+
+    private async Task<Error?> GetRoleBlockAsync(Guid userId, IList<string> roles)
+    {
+        if (roles.Contains(Roles.Admin)) return null;
+        var block = await GetCompanyBlockAsync(userId, roles);
+        if (block is not null) return block;
+        if (roles.Contains(Roles.Supervisor) && await IsSuspendedEverywhereAsync(userId))
         {
             return Error.Forbidden("Supervisor.Suspended", "This supervisor account is suspended by its company.");
         }
-        return new AuthUser(user.Id, user.Email!, user.FullName, roles.ToList(), user.MustChangePassword);
+        return null;
     }
 
     private async Task<Error?> GetCompanyBlockAsync(Guid userId, IList<string> roles)
@@ -444,7 +464,12 @@ internal sealed class IdentityService(
         await userManager.SetLockoutEnabledAsync(user, true);
         var updated = await userManager.SetLockoutEndDateAsync(user, disabled ? DateTimeOffset.MaxValue : null);
         if (!updated.Succeeded) return Result.Failure(IdentityFailure("Auth.AccountDisabled", updated));
-        if (disabled) await refreshTokenService.RevokeAllForUserAsync(user.Id, cancellationToken);
+        accessCache.Reset();
+        if (disabled)
+        {
+            await refreshTokenService.RevokeAllForUserAsync(user.Id, cancellationToken);
+            await notifier.AccountBlockedAsync(user.Id, "Auth.AccountDisabled", cancellationToken);
+        }
         return Result.Success();
     }
 
@@ -463,11 +488,13 @@ internal sealed class IdentityService(
 
     public async Task<Result> ForgotPasswordAsync(string email, CancellationToken cancellationToken = default)
     {
-        var user = await userManager.FindByEmailAsync(email);
+        var user = await userManager.FindByEmailAsync(email.Trim());
         if (user is not null)
         {
+            // A throttled request or a failed send is not reported (no user enumeration); a failed send
+            // leaves no pending code, so the next request is not throttled.
             await verificationCodeService.GenerateAndSendAsync(
-                user.Id, email, VerificationPurpose.PasswordReset, cancellationToken);
+                user.Id, user.Email!, VerificationPurpose.PasswordReset, cancellationToken);
         }
         return Result.Success(); // always 200: no user enumeration
     }
@@ -475,10 +502,17 @@ internal sealed class IdentityService(
     public async Task<Result> ResetPasswordAsync(
         string email, string code, string newPassword, CancellationToken cancellationToken = default)
     {
-        var user = await userManager.FindByEmailAsync(email);
+        var user = await userManager.FindByEmailAsync(email.Trim());
         if (user is null)
         {
             return Result.Failure(Error.Failure("Otp.Invalid", "The verification code is incorrect."));
+        }
+
+        // Check the new password before using up the code: a weak password must not cost the user their code.
+        foreach (var validator in userManager.PasswordValidators)
+        {
+            var check = await validator.ValidateAsync(userManager, user, newPassword);
+            if (!check.Succeeded) return Result.Failure(Error.Validation("Auth.WeakPassword", string.Join(" ", check.Errors.Select(e => e.Description))));
         }
 
         var validation = await verificationCodeService.ValidateAsync(
@@ -497,6 +531,7 @@ internal sealed class IdentityService(
         }
 
         user.MustChangePassword = false;
+        user.EmailConfirmed = true; // the code reached this mailbox, so a never-verified signup can sign in now
         var updated = await userManager.UpdateAsync(user);
         if (!updated.Succeeded) return Result.Failure(IdentityFailure("Auth.ResetFailed", updated));
 

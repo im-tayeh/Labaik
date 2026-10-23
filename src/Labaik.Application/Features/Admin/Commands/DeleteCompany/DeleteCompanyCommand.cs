@@ -27,6 +27,10 @@ public sealed class DeleteCompanyCommandHandler(
         if (ownerDisabled.IsFailure) return ownerDisabled;
         foreach (var supervisor in company.Supervisors)
         {
+            // A supervisor who also works for another company keeps their account for that company.
+            var onAnotherRoster = await context.Companies.AnyAsync(c => c.Id != company.Id
+                && c.Supervisors.Any(s => s.UserId == supervisor.UserId), cancellationToken);
+            if (onAnotherRoster) continue;
             var disabled = await identityService.SetDisabledAsync(supervisor.UserId, true, cancellationToken);
             if (disabled.IsFailure) return disabled;
         }
